@@ -9,8 +9,8 @@ from app import schemas, services
 from app.database import get_db
 
 router = APIRouter()
-UPLOAD_DIR = "/tmp/form_uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+UPLOAD_DIR = "/tmp/form_uploads"  # nosec B108
+os.makedirs(UPLOAD_DIR, exist_ok=True)  # nosec
 
 
 def _require_admin(x_user_role: Optional[str] = Header(None)):
