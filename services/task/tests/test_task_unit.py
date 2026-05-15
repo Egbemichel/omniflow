@@ -1,5 +1,4 @@
 # services/task/tests/test_task_unit.py
-import pytest
 
 
 class TestSubmissions:

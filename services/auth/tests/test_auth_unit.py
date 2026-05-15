@@ -1,6 +1,5 @@
 # services/auth/tests/test_auth_unit.py
 # Follow TDD: make ONE test pass at a time
-import pytest
 
 
 class TestUserRegistration:
