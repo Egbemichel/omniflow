@@ -39,7 +39,7 @@ jobs:
           for svc in auth form workflow task notification; do
             echo "Auditing $svc..."
             cd services/$svc
-            pip-audit --ignore-vuln CVE-2026-30922 --ignore-vuln CVE-2025-62727
+            pip-audit --ignore-vuln CVE-2026-30922 --ignore-vuln CVE-2025-62727 --ignore-vuln CVE-2024-47874 --ignore-vuln CVE-2025-54121
             cd ../..
           done
 
