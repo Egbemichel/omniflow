@@ -32,7 +32,7 @@ jobs:
         run: ruff format --check services/
 
       - name: Run bandit security scanner
-        run: bandit -r services/ -ll -x services/*/tests/
+        run: bandit -r services/ -ll --exclude services/auth/tests,services/form/tests,services/workflow/tests,services/task/tests,services/notification/tests
 
       - name: Run pip-audit (CVE check) on each service
         run: |
