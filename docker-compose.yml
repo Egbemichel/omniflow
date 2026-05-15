@@ -1,0 +1,114 @@
+version: "3.9"
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pk_user
+      POSTGRES_PASSWORD: pk_password
+      POSTGRES_DB: paper_killer
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_schemas.sql:/docker-entrypoint-initdb.d/init_schemas.sql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "pk_user"]
+      interval: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 5
+
+  auth:
+    build: ./services/auth
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql://pk_user:pk_password@postgres:5432/paper_killer
+      DATABASE_SCHEMA: auth_schema
+      JWT_SECRET: dev_secret_key
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRE_MINUTES: 60
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  form:
+    build: ./services/form
+    ports:
+      - "8002:8002"
+    environment:
+      DATABASE_URL: postgresql://pk_user:pk_password@postgres:5432/paper_killer
+      DATABASE_SCHEMA: form_schema
+      REDIS_URL: redis://redis:6379/0
+      UPLOAD_DIR: /uploads
+    volumes:
+      - uploads:/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  workflow:
+    build: ./services/workflow
+    ports:
+      - "8003:8003"
+    environment:
+      DATABASE_URL: postgresql://pk_user:pk_password@postgres:5432/paper_killer
+      DATABASE_SCHEMA: workflow_schema
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  task:
+    build: ./services/task
+    ports:
+      - "8004:8004"
+    environment:
+      DATABASE_URL: postgresql://pk_user:pk_password@postgres:5432/paper_killer
+      DATABASE_SCHEMA: task_schema
+      WORKFLOW_SERVICE_URL: http://workflow:8003
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      workflow:
+        condition: service_started
+
+  notification:
+    build: ./services/notification
+    ports:
+      - "8005:8005"
+    environment:
+      DATABASE_URL: postgresql://pk_user:pk_password@postgres:5432/paper_killer
+      DATABASE_SCHEMA: notification_schema
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+    depends_on:
+      - auth
+      - task
+
+volumes:
+  postgres_data:
+  uploads:
