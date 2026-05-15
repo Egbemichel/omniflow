@@ -9,7 +9,7 @@ from app import schemas, services
 from app.database import get_db
 
 router = APIRouter()
-UPLOAD_DIR = "/tmp/form_uploads"  # nosec B108
+UPLOAD_DIR = "/tmp/form_uploads"  # nosec B108  # nosec B108
 os.makedirs(UPLOAD_DIR, exist_ok=True)  # nosec
 
 
