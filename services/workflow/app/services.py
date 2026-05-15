@@ -6,6 +6,7 @@ from app import models, schemas
 
 # ── Workflow CRUD ────────────────────────────────────────────────────────────
 
+
 def create_workflow(db: Session, payload: schemas.WorkflowCreate) -> models.Workflow:
     workflow = models.Workflow(name=payload.name, description=payload.description)
     db.add(workflow)
@@ -34,7 +35,9 @@ def publish_workflow(db: Session, workflow: models.Workflow) -> models.Workflow:
     return workflow
 
 
-def add_step(db: Session, workflow: models.Workflow, step_data: schemas.StepIn) -> models.WorkflowStep:
+def add_step(
+    db: Session, workflow: models.Workflow, step_data: schemas.StepIn
+) -> models.WorkflowStep:
     step = models.WorkflowStep(
         workflow_id=workflow.id,
         order=step_data.order,
@@ -49,7 +52,10 @@ def add_step(db: Session, workflow: models.Workflow, step_data: schemas.StepIn) 
 
 # ── State machine ────────────────────────────────────────────────────────────
 
-def _get_step_for_order(workflow: models.Workflow, order: int) -> Optional[models.WorkflowStep]:
+
+def _get_step_for_order(
+    workflow: models.Workflow, order: int
+) -> Optional[models.WorkflowStep]:
     for step in workflow.steps:
         if step.order == order:
             return step
@@ -77,7 +83,9 @@ def initialise_submission(
     return state
 
 
-def get_submission_state(db: Session, submission_id: str) -> Optional[models.SubmissionState]:
+def get_submission_state(
+    db: Session, submission_id: str
+) -> Optional[models.SubmissionState]:
     return (
         db.query(models.SubmissionState)
         .filter(models.SubmissionState.submission_id == submission_id)

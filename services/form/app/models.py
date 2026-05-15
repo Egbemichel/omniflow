@@ -11,7 +11,9 @@ class Form(Base):
     name = Column(String, nullable=False)
     file_path = Column(String, nullable=True)
     fields = Column(JSON, nullable=False, default=list)  # extracted field definitions
-    status = Column(String, nullable=False, default="processing")  # processing | ready | error
+    status = Column(
+        String, nullable=False, default="processing"
+    )  # processing | ready | error
     uploaded_by = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

@@ -11,7 +11,9 @@ class Submission(Base):
     workflow_id = Column(String, nullable=False)
     submitted_by = Column(String, nullable=False)  # user_id from header
     form_data = Column(JSON, nullable=False, default=dict)
-    status = Column(String, nullable=False, default="in_progress")  # in_progress | completed
+    status = Column(
+        String, nullable=False, default="in_progress"
+    )  # in_progress | completed
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 

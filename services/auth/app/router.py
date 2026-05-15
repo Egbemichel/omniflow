@@ -10,6 +10,7 @@ router = APIRouter()
 
 # ── Dependency: extract and validate Bearer token ────────────────────────────
 
+
 def _get_token(authorization: Optional[str] = Header(None)) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -34,6 +35,7 @@ def _require_admin(current_user=Depends(_get_current_user)):
 
 # ── Auth routes ──────────────────────────────────────────────────────────────
 
+
 @router.post("/auth/register", response_model=schemas.UserResponse, status_code=201)
 def register(payload: schemas.UserRegister, db: Session = Depends(get_db)):
     if services.get_user_by_email(db, payload.email):
@@ -46,16 +48,23 @@ def login(payload: schemas.UserLogin, db: Session = Depends(get_db)):
     user = services.authenticate_user(db, payload)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    token = services.create_access_token({"sub": user.id, "email": user.email, "role": user.role})
+    token = services.create_access_token(
+        {"sub": user.id, "email": user.email, "role": user.role}
+    )
     return {"access_token": token, "token_type": "bearer"}
 
 
 @router.get("/auth/verify", response_model=schemas.TokenVerifyResponse)
 def verify_token(current_user=Depends(_get_current_user)):
-    return {"user_id": current_user.id, "email": current_user.email, "role": current_user.role}
+    return {
+        "user_id": current_user.id,
+        "email": current_user.email,
+        "role": current_user.role,
+    }
 
 
 # ── Admin routes ─────────────────────────────────────────────────────────────
+
 
 @router.get("/admin/users", response_model=List[schemas.UserResponse])
 def list_users(db: Session = Depends(get_db), _=Depends(_require_admin)):

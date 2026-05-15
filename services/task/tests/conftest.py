@@ -11,6 +11,7 @@ TEST_DB_URL = "sqlite:///./test_task.db"
 engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 def override_get_db():
     db = TestingSessionLocal()
     try:
@@ -18,12 +19,14 @@ def override_get_db():
     finally:
         db.close()
 
+
 @pytest.fixture(scope="session", autouse=True)
 def setup_db():
     Base.metadata.create_all(bind=engine)
     app.dependency_overrides[get_db] = override_get_db
     yield
     Base.metadata.drop_all(bind=engine)
+
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -33,49 +36,59 @@ def clean_db():
             conn.execute(table.delete())
         conn.commit()
 
+
 @pytest.fixture
 def client():
     with TestClient(app) as c:
         yield c
 
+
 # Mock the Workflow Service HTTP call so task tests don't need it running
 @pytest.fixture
 def mock_workflow_service():
-    with patch("app.services.workflow_client.initialise_submission") as mock_init, \
-         patch("app.services.workflow_client.advance_submission") as mock_advance:
-
+    with (
+        patch("app.services.workflow_client.initialise_submission") as mock_init,
+        patch("app.services.workflow_client.advance_submission") as mock_advance,
+    ):
         mock_init.return_value = {
             "submission_id": "sub-001",
             "current_step": 1,
             "assigned_role": "nurse",
-            "status": "in_progress"
+            "status": "in_progress",
         }
         mock_advance.return_value = {
             "submission_id": "sub-001",
             "current_step": 2,
             "assigned_role": "doctor",
-            "status": "in_progress"
+            "status": "in_progress",
         }
         yield {"init": mock_init, "advance": mock_advance}
+
 
 @pytest.fixture
 def nurse_headers():
     return {"X-User-Id": "nurse-001", "X-User-Role": "nurse"}
 
+
 @pytest.fixture
 def doctor_headers():
     return {"X-User-Id": "doctor-001", "X-User-Role": "doctor"}
+
 
 @pytest.fixture
 def end_user_headers():
     return {"X-User-Id": "user-001", "X-User-Role": "end_user"}
 
+
 @pytest.fixture
 def created_submission(client, end_user_headers, mock_workflow_service):
-    response = client.post("/submissions", json={
-        "workflow_id": "wf-001",
-        "form_data": {"patient_name": "John Doe", "age": "35"}
-    }, headers=end_user_headers)
+    response = client.post(
+        "/submissions",
+        json={
+            "workflow_id": "wf-001",
+            "form_data": {"patient_name": "John Doe", "age": "35"},
+        },
+        headers=end_user_headers,
+    )
     assert response.status_code == 201
     return response.json()
-

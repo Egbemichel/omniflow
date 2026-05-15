@@ -35,7 +35,11 @@ def create_submission(
 
 
 def get_submission(db: Session, submission_id: str) -> Optional[models.Submission]:
-    return db.query(models.Submission).filter(models.Submission.id == submission_id).first()
+    return (
+        db.query(models.Submission)
+        .filter(models.Submission.id == submission_id)
+        .first()
+    )
 
 
 def get_inbox(db: Session, role: str) -> List[models.Task]:
@@ -72,7 +76,9 @@ def complete_task(
     db.add(event)
 
     # Advance workflow state
-    wf_state = workflow_client.advance_submission(submission.workflow_id, submission.id, actor_role)
+    wf_state = workflow_client.advance_submission(
+        submission.workflow_id, submission.id, actor_role
+    )
 
     if wf_state["status"] == "completed":
         submission.status = "completed"

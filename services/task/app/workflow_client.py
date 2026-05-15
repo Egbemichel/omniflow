@@ -3,6 +3,7 @@ HTTP client for the Workflow Service.
 In tests this module is mocked via conftest.py.
 In production it calls the real workflow service URL.
 """
+
 import os
 import httpx
 

@@ -28,18 +28,26 @@ async def upload_form(
     file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.filename}")
     with open(file_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
-    return services.create_form(db, file.filename or "unnamed", file_path, x_user_id or "unknown")
+    return services.create_form(
+        db, file.filename or "unnamed", file_path, x_user_id or "unknown"
+    )
 
 
 @router.get("/forms", response_model=List[schemas.FormOut])
-def list_forms(db: Session = Depends(get_db), x_user_role: Optional[str] = Header(None)):
+def list_forms(
+    db: Session = Depends(get_db), x_user_role: Optional[str] = Header(None)
+):
     if not x_user_role:
         raise HTTPException(status_code=401, detail="Authentication required")
     return services.list_forms(db)
 
 
 @router.get("/forms/{form_id}", response_model=schemas.FormOut)
-def get_form(form_id: str, db: Session = Depends(get_db), x_user_role: Optional[str] = Header(None)):
+def get_form(
+    form_id: str,
+    db: Session = Depends(get_db),
+    x_user_role: Optional[str] = Header(None),
+):
     if not x_user_role:
         raise HTTPException(status_code=401, detail="Authentication required")
     form = services.get_form(db, form_id)

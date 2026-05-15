@@ -17,7 +17,9 @@ def create_notification(
     # Only internal services (acting as admin) or admins can push notifications
     if x_user_role not in ("admin",):
         raise HTTPException(status_code=403, detail="Forbidden")
-    return services.create_notification(db, payload.recipient_id, payload.event_type, payload.message)
+    return services.create_notification(
+        db, payload.recipient_id, payload.event_type, payload.message
+    )
 
 
 @router.get("/notifications", response_model=List[schemas.NotificationOut])
@@ -31,7 +33,9 @@ def get_my_notifications(
     return services.get_notifications(db, x_user_id)
 
 
-@router.patch("/notifications/{notification_id}/read", response_model=schemas.NotificationOut)
+@router.patch(
+    "/notifications/{notification_id}/read", response_model=schemas.NotificationOut
+)
 def mark_read(
     notification_id: str,
     db: Session = Depends(get_db),

@@ -19,6 +19,7 @@ def _require_auth(
 
 # ── Submissions ──────────────────────────────────────────────────────────────
 
+
 @router.post("/submissions", response_model=schemas.SubmissionOut, status_code=201)
 def create_submission(
     payload: schemas.SubmissionCreate,
@@ -31,7 +32,9 @@ def create_submission(
     return services.create_submission(db, payload, x_user_id)
 
 
-@router.get("/submissions/{submission_id}/status", response_model=schemas.SubmissionStatusOut)
+@router.get(
+    "/submissions/{submission_id}/status", response_model=schemas.SubmissionStatusOut
+)
 def get_submission_status(
     submission_id: str,
     db: Session = Depends(get_db),
@@ -49,7 +52,9 @@ def get_submission_status(
     return schemas.SubmissionStatusOut(id=sub.id, status=sub.status)
 
 
-@router.get("/submissions/{submission_id}/history", response_model=List[schemas.AuditEventOut])
+@router.get(
+    "/submissions/{submission_id}/history", response_model=List[schemas.AuditEventOut]
+)
 def get_submission_history(
     submission_id: str,
     db: Session = Depends(get_db),
@@ -65,6 +70,7 @@ def get_submission_history(
 
 
 # ── Tasks ────────────────────────────────────────────────────────────────────
+
 
 @router.get("/tasks/inbox", response_model=List[schemas.TaskOut])
 def get_inbox(
@@ -95,7 +101,9 @@ def complete_task(
         raise HTTPException(status_code=409, detail="Task already completed")
 
     if task.assigned_role != x_user_role:
-        raise HTTPException(status_code=403, detail="Your role cannot complete this task")
+        raise HTTPException(
+            status_code=403, detail="Your role cannot complete this task"
+        )
 
     sub = services.get_submission(db, task.submission_id)
     return services.complete_task(db, task, sub, x_user_id, x_user_role)

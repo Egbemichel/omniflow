@@ -3,7 +3,9 @@ from typing import List, Optional
 from app import models
 
 
-def create_form(db: Session, name: str, file_path: str, uploaded_by: str) -> models.Form:
+def create_form(
+    db: Session, name: str, file_path: str, uploaded_by: str
+) -> models.Form:
     form = models.Form(name=name, file_path=file_path, uploaded_by=uploaded_by)
     db.add(form)
     db.commit()

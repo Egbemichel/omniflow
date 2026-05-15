@@ -14,8 +14,15 @@ class Workflow(Base):
     status = Column(String, nullable=False, default="draft")  # draft | published
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    steps = relationship("WorkflowStep", back_populates="workflow", order_by="WorkflowStep.order", cascade="all, delete-orphan")
-    submission_states = relationship("SubmissionState", back_populates="workflow", cascade="all, delete-orphan")
+    steps = relationship(
+        "WorkflowStep",
+        back_populates="workflow",
+        order_by="WorkflowStep.order",
+        cascade="all, delete-orphan",
+    )
+    submission_states = relationship(
+        "SubmissionState", back_populates="workflow", cascade="all, delete-orphan"
+    )
 
 
 class WorkflowStep(Base):
@@ -37,7 +44,9 @@ class SubmissionState(Base):
     submission_id = Column(String, nullable=False, unique=True, index=True)
     workflow_id = Column(String, ForeignKey("workflows.id"), nullable=False)
     current_step = Column(Integer, nullable=True)  # None when completed
-    status = Column(String, nullable=False, default="in_progress")  # in_progress | completed
+    status = Column(
+        String, nullable=False, default="in_progress"
+    )  # in_progress | completed
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
