@@ -145,7 +145,6 @@ jobs:
           docker build -t pk-workflow:test    ./services/workflow
           docker build -t pk-task:test        ./services/task
           docker build -t pk-notification:test ./services/notification
-          docker build -t pk-frontend:test    ./frontend
 
       - name: Verify all images exist
         run: docker images | grep pk-
