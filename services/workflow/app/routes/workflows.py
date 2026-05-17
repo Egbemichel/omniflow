@@ -39,7 +39,7 @@ def create_workflow(
     workflow = repo.create_workflow(
         workflow_id=workflow_id,
         institution_id=int(current_user["institution_id"]),
-        admin_id=int(current_user["user_id"]),
+        admin_id=int(current_user["id"]),
         name=payload.name,
         description=payload.description,
         form_id=payload.form_id,
