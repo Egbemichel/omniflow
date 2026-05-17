@@ -29,3 +29,10 @@ Thumbs.db
 # IDEs
 .vscode/settings.json
 .idea/
+
+# Context
+context/
+
+# AGENTS
+AGENTS.md
+
