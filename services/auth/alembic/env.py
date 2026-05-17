@@ -1,10 +1,20 @@
 import os
+import sys
 from logging.config import fileConfig
-from alembic import context
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-from app.database import Base
-from app import models  # noqa: F401  # registers models with Base.metadata for Alembic
+from pathlib import Path
+
+# Bootstrap: add services/auth/app to sys.path so 'app' is importable
+# regardless of where alembic is invoked from.
+_APP_ROOT = Path(__file__).resolve().parent.parent / "app"
+if str(_APP_ROOT) not in sys.path:
+    sys.path.insert(
+        0, str(_APP_ROOT.parent)
+    )  # adds services/auth/ so 'from app.x import y' works
+
+from alembic import context  # noqa: E402
+from sqlalchemy import engine_from_config, pool  # noqa: E402
+from app.database import Base  # noqa: E402
+from app.models.user import User  # noqa: F401, E402  # registers model with Base.metadata
 
 config = context.config
 

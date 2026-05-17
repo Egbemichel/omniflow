@@ -1,20 +1,19 @@
 import os
 import sys
-from pathlib import Path
 from logging.config import fileConfig
+from pathlib import Path
+
 from alembic import context
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 _ALEMBIC_DIR = Path(__file__).resolve().parent
 _SERVICE_ROOT = _ALEMBIC_DIR.parent
 
-_s = str(_SERVICE_ROOT)
-if _s not in sys.path:
-    sys.path.insert(0, _s)
+if str(_SERVICE_ROOT) not in sys.path:
+    sys.path.insert(0, str(_SERVICE_ROOT))
 
 from app.database import Base  # noqa: E402
-from app import models  # noqa: E402, F401  # registers models with Base.metadata
+from app.models.workflow import Workflow, WorkflowStep  # noqa: F401, E402  # registers models with Base.metadata
 
 config = context.config
 
