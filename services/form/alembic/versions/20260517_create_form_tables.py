@@ -45,12 +45,16 @@ def upgrade() -> None:
         sa.Column(
             "form_id",
             sa.String(),
-            sa.ForeignKey("form.forms.id" if not is_sqlite else "forms.id", ondelete="CASCADE"),
+            sa.ForeignKey(
+                "form.forms.id" if not is_sqlite else "forms.id", ondelete="CASCADE"
+            ),
             nullable=False,
         ),
         sa.Column("field_name", sa.String(), nullable=False),
         sa.Column("field_type", sa.String(), nullable=False, server_default="text"),
-        sa.Column("required", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+        sa.Column(
+            "required", sa.Boolean(), nullable=False, server_default=sa.text("false")
+        ),
         sa.Column("position", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=now_default),
         schema=schema,

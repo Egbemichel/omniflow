@@ -11,7 +11,9 @@ class EventService:
             decode_responses=True,
         )
 
-    def publish_ocr_completed(self, form_id: str, institution_id: int, admin_id: int, field_count: int) -> None:
+    def publish_ocr_completed(
+        self, form_id: str, institution_id: int, admin_id: int, field_count: int
+    ) -> None:
         payload = {
             "event": "ocr.completed",
             "form_id": form_id,

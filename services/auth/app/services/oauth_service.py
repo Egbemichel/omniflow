@@ -7,10 +7,13 @@ logger = logging.getLogger(__name__)
 
 class OAuthError(Exception):
     """Raised when an OAuth exchange fails."""
+
     pass
 
 
-def exchange_google_code(client_id: str, client_secret: str, code: str, redirect_uri: str) -> Dict[str, str]:
+def exchange_google_code(
+    client_id: str, client_secret: str, code: str, redirect_uri: str
+) -> Dict[str, str]:
     """Exchange a Google OAuth code for user identity."""
     token_url = "https://oauth2.googleapis.com/token"
     userinfo_url = "https://openidconnect.googleapis.com/v1/userinfo"
@@ -35,7 +38,9 @@ def exchange_google_code(client_id: str, client_secret: str, code: str, redirect
         raise OAuthError("Login failed") from exc
 
 
-def exchange_github_code(client_id: str, client_secret: str, code: str, redirect_uri: str) -> Dict[str, str]:
+def exchange_github_code(
+    client_id: str, client_secret: str, code: str, redirect_uri: str
+) -> Dict[str, str]:
     """Exchange a GitHub OAuth code for user identity."""
     token_url = "https://github.com/login/oauth/access_token"
     user_url = "https://api.github.com/user"

@@ -4,8 +4,18 @@ from app.repositories.form_repository import FormRepository
 def test_upload_happy_path(admin_client, db_session, upload_dir, monkeypatch):
     def fake_extract(self, file_path):
         return [
-            {"field_name": "Name", "field_type": "text", "required": False, "position": 0},
-            {"field_name": "Date", "field_type": "date", "required": False, "position": 1},
+            {
+                "field_name": "Name",
+                "field_type": "text",
+                "required": False,
+                "position": 0,
+            },
+            {
+                "field_name": "Date",
+                "field_type": "date",
+                "required": False,
+                "position": 1,
+            },
         ]
 
     published = {}
@@ -18,8 +28,12 @@ def test_upload_happy_path(admin_client, db_session, upload_dir, monkeypatch):
             "field_count": field_count,
         }
 
-    monkeypatch.setattr("app.services.ocr_service.OCRService.extract_fields", fake_extract)
-    monkeypatch.setattr("app.services.event_service.EventService.publish_ocr_completed", fake_publish)
+    monkeypatch.setattr(
+        "app.services.ocr_service.OCRService.extract_fields", fake_extract
+    )
+    monkeypatch.setattr(
+        "app.services.event_service.EventService.publish_ocr_completed", fake_publish
+    )
 
     response = admin_client.post(
         "/forms/upload",

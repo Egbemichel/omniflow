@@ -16,10 +16,16 @@ depends_on = None
 
 def upgrade() -> None:
     with op.batch_alter_table("users") as batch_op:
-        batch_op.add_column(sa.Column("institution_id", sa.Integer(), nullable=False, server_default="1"))
+        batch_op.add_column(
+            sa.Column(
+                "institution_id", sa.Integer(), nullable=False, server_default="1"
+            )
+        )
         batch_op.add_column(sa.Column("oauth_provider", sa.String(), nullable=True))
         batch_op.add_column(sa.Column("oauth_id", sa.String(), nullable=True))
-        batch_op.add_column(sa.Column("last_login", sa.DateTime(timezone=True), nullable=True))
+        batch_op.add_column(
+            sa.Column("last_login", sa.DateTime(timezone=True), nullable=True)
+        )
         batch_op.create_unique_constraint("uq_oauth", ["oauth_provider", "oauth_id"])
         batch_op.drop_column("hashed_password")
 

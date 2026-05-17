@@ -14,8 +14,8 @@ from sqlalchemy.orm import sessionmaker
 # Path bootstrap — must happen before ANY local imports.
 # services/auth/app/ is the actual package root (main.py lives there).
 # ---------------------------------------------------------------------------
-_TESTS_DIR = Path(__file__).resolve().parent       # …/services/auth/tests
-_AUTH_ROOT = _TESTS_DIR.parent                     # …/services/auth
+_TESTS_DIR = Path(__file__).resolve().parent  # …/services/auth/tests
+_AUTH_ROOT = _TESTS_DIR.parent  # …/services/auth
 
 _s = str(_AUTH_ROOT)
 if _s not in sys.path:
@@ -36,10 +36,10 @@ os.environ.setdefault("GITHUB_CLIENT_SECRET", "test_github_secret")
 # ---------------------------------------------------------------------------
 # Local imports — all resolved relative to services/auth/app/
 # ---------------------------------------------------------------------------
-from app.main import app                                                     # noqa: E402
-from app.database import Base, get_db                                        # noqa: E402
-from app.models.user import User                                             # noqa: E402
-from app.routes.magic_link import get_magic_link_service                     # noqa: E402
+from app.main import app  # noqa: E402
+from app.database import Base, get_db  # noqa: E402
+from app.models.user import User  # noqa: E402
+from app.routes.magic_link import get_magic_link_service  # noqa: E402
 from app.services.magic_link_service import MagicLinkConfig, MagicLinkService  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -162,6 +162,7 @@ def client_with_magic_link_override(magic_link_service):
 @pytest.fixture
 def create_user():
     """Factory fixture — call inside a test to create a User row."""
+
     def _create(
         session,
         email: str = "test@example.com",

@@ -1,11 +1,15 @@
-def test_publish_happy_path_emits_event(admin_client, create_workflow, add_step, monkeypatch):
+def test_publish_happy_path_emits_event(
+    admin_client, create_workflow, add_step, monkeypatch
+):
     workflow = create_workflow()
     add_step(workflow.id, "Start", "admin", 1, False)
     add_step(workflow.id, "End", "staff", 2, True)
 
     published = {}
 
-    def fake_publish(self, workflow_id, institution_id, admin_id, step_count, published_at):
+    def fake_publish(
+        self, workflow_id, institution_id, admin_id, step_count, published_at
+    ):
         published["payload"] = {
             "workflow_id": workflow_id,
             "institution_id": institution_id,
@@ -54,7 +58,9 @@ def test_publish_multiple_terminal_returns_422(admin_client, create_workflow, ad
     assert response.status_code == 422
 
 
-def test_publish_duplicate_step_order_returns_422(admin_client, create_workflow, add_step):
+def test_publish_duplicate_step_order_returns_422(
+    admin_client, create_workflow, add_step
+):
     workflow = create_workflow()
     add_step(workflow.id, "A", "admin", 1, False)
     add_step(workflow.id, "B", "staff", 1, True)

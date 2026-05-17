@@ -43,7 +43,9 @@ class WorkflowRepository:
     def get_workflow(self, workflow_id: str, institution_id: int) -> Optional[Workflow]:
         return (
             self.session.query(Workflow)
-            .filter(Workflow.id == workflow_id, Workflow.institution_id == institution_id)
+            .filter(
+                Workflow.id == workflow_id, Workflow.institution_id == institution_id
+            )
             .first()
         )
 
@@ -53,7 +55,9 @@ class WorkflowRepository:
     def list_workflows(
         self, institution_id: int, page: int, page_size: int
     ) -> Tuple[int, List[Workflow]]:
-        query = self.session.query(Workflow).filter(Workflow.institution_id == institution_id)
+        query = self.session.query(Workflow).filter(
+            Workflow.institution_id == institution_id
+        )
         total = query.count()
         items = (
             query.order_by(Workflow.created_at.desc())

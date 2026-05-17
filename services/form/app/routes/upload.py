@@ -1,6 +1,14 @@
 import os
 import uuid
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+)
 from sqlalchemy.orm import Session
 from app.database import SessionLocal, get_db
 from app.repositories.form_repository import FormRepository
@@ -35,7 +43,12 @@ def _safe_extension(filename: str, mime_type: str) -> str:
     return ext
 
 
-def _save_upload_file(upload_file: UploadFile, target_path: str, max_bytes: int, content_length: int | None) -> None:
+def _save_upload_file(
+    upload_file: UploadFile,
+    target_path: str,
+    max_bytes: int,
+    content_length: int | None,
+) -> None:
     if content_length is not None and content_length > max_bytes:
         raise HTTPException(status_code=413, detail="File too large")
 
@@ -75,7 +88,9 @@ def _run_ocr(form_id: str, file_path: str, institution_id: int, admin_id: int) -
             repo.update_status(form, "FAILED")
     finally:
         try:
-            event_service.publish_ocr_completed(form_id, institution_id, admin_id, field_count)
+            event_service.publish_ocr_completed(
+                form_id, institution_id, admin_id, field_count
+            )
         finally:
             db.close()
 
@@ -102,7 +117,9 @@ async def upload_form(
     file_path = os.path.join(upload_dir, f"{form_id}.{ext}")
 
     content_length = request.headers.get("content-length")
-    content_len_int = int(content_length) if content_length and content_length.isdigit() else None
+    content_len_int = (
+        int(content_length) if content_length and content_length.isdigit() else None
+    )
     _save_upload_file(file, file_path, _max_bytes(), content_len_int)
 
     repo = FormRepository(db)

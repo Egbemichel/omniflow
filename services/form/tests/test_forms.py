@@ -7,8 +7,18 @@ def test_status_ready_returns_fields(admin_client, db_session, create_form):
     repo.replace_fields(
         form.id,
         [
-            {"field_name": "Name", "field_type": "text", "required": False, "position": 0},
-            {"field_name": "Date", "field_type": "date", "required": False, "position": 1},
+            {
+                "field_name": "Name",
+                "field_type": "text",
+                "required": False,
+                "position": 0,
+            },
+            {
+                "field_name": "Date",
+                "field_type": "date",
+                "required": False,
+                "position": 1,
+            },
         ],
     )
 
@@ -25,7 +35,12 @@ def test_schema_patch_confirms(admin_client, db_session, create_form):
         f"/forms/{form.id}/schema",
         json={
             "fields": [
-                {"field_name": "Full Name", "field_type": "text", "required": True, "position": 0}
+                {
+                    "field_name": "Full Name",
+                    "field_type": "text",
+                    "required": True,
+                    "position": 0,
+                }
             ]
         },
     )
@@ -34,7 +49,16 @@ def test_schema_patch_confirms(admin_client, db_session, create_form):
 
     conflict = admin_client.patch(
         f"/forms/{form.id}/schema",
-        json={"fields": [{"field_name": "X", "field_type": "text", "required": False, "position": 0}]},
+        json={
+            "fields": [
+                {
+                    "field_name": "X",
+                    "field_type": "text",
+                    "required": False,
+                    "position": 0,
+                }
+            ]
+        },
     )
     assert conflict.status_code == 409
 

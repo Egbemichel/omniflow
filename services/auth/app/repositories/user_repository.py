@@ -28,9 +28,7 @@ class UserRepository:
     def list_by_institution(self, institution_id: int):
         """List all users in the given institution."""
         return (
-            self.session.query(User)
-            .filter(User.institution_id == institution_id)
-            .all()
+            self.session.query(User).filter(User.institution_id == institution_id).all()
         )
 
     def assign_role(self, user: User, role: str) -> User:

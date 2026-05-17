@@ -78,17 +78,32 @@ def db_session():
 
 @pytest.fixture
 def admin_user():
-    return {"user_id": 42, "email": "admin@pk.com", "role": "admin", "institution_id": 1}
+    return {
+        "user_id": 42,
+        "email": "admin@pk.com",
+        "role": "admin",
+        "institution_id": 1,
+    }
 
 
 @pytest.fixture
 def staff_user():
-    return {"user_id": 43, "email": "staff@pk.com", "role": "staff", "institution_id": 1}
+    return {
+        "user_id": 43,
+        "email": "staff@pk.com",
+        "role": "staff",
+        "institution_id": 1,
+    }
 
 
 @pytest.fixture
 def other_admin_user():
-    return {"user_id": 99, "email": "admin@other.com", "role": "admin", "institution_id": 2}
+    return {
+        "user_id": 99,
+        "email": "admin@other.com",
+        "role": "admin",
+        "institution_id": 2,
+    }
 
 
 @pytest.fixture

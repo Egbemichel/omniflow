@@ -18,8 +18,18 @@ def test_validate_steps_returns_multiple_errors():
 
 def test_validate_steps_duplicate_orders():
     steps = [
-        {"step_name": "A", "assigned_role": "admin", "step_order": 1, "is_terminal": False},
-        {"step_name": "B", "assigned_role": "staff", "step_order": 1, "is_terminal": True},
+        {
+            "step_name": "A",
+            "assigned_role": "admin",
+            "step_order": 1,
+            "is_terminal": False,
+        },
+        {
+            "step_name": "B",
+            "assigned_role": "staff",
+            "step_order": 1,
+            "is_terminal": True,
+        },
     ]
     errors = validate_steps(steps)
     assert any("Duplicate step_order" in err for err in errors)
@@ -27,8 +37,18 @@ def test_validate_steps_duplicate_orders():
 
 def test_validate_steps_ok():
     steps = [
-        {"step_name": "A", "assigned_role": "admin", "step_order": 1, "is_terminal": False},
-        {"step_name": "B", "assigned_role": "staff", "step_order": 2, "is_terminal": True},
+        {
+            "step_name": "A",
+            "assigned_role": "admin",
+            "step_order": 1,
+            "is_terminal": False,
+        },
+        {
+            "step_name": "B",
+            "assigned_role": "staff",
+            "step_order": 2,
+            "is_terminal": True,
+        },
     ]
     errors = validate_steps(steps)
     assert errors == []

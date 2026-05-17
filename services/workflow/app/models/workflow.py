@@ -36,7 +36,9 @@ class Workflow(Base):
     status = Column(String, nullable=False, default="DRAFT")
     locked_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     steps = relationship(
         "WorkflowStep",
@@ -51,12 +53,16 @@ class WorkflowStep(Base):
     __table_args__ = _table_args()
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    workflow_id = Column(String, ForeignKey(_workflow_fk(), ondelete="CASCADE"), nullable=False)
+    workflow_id = Column(
+        String, ForeignKey(_workflow_fk(), ondelete="CASCADE"), nullable=False
+    )
     step_name = Column(String, nullable=False)
     assigned_role = Column(String, nullable=False)
     step_order = Column(Integer, nullable=False)
     is_terminal = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     workflow = relationship("Workflow", back_populates="steps")

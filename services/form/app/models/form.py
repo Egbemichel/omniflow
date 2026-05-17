@@ -34,7 +34,9 @@ class Form(Base):
     mime_type = Column(String, nullable=False)
     status = Column(String, nullable=False, default="UPLOADED")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class FormField(Base):
@@ -42,7 +44,9 @@ class FormField(Base):
     __table_args__ = _table_args()
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    form_id = Column(String, ForeignKey(_form_fk(), ondelete="CASCADE"), nullable=False, index=True)
+    form_id = Column(
+        String, ForeignKey(_form_fk(), ondelete="CASCADE"), nullable=False, index=True
+    )
     field_name = Column(String, nullable=False)
     field_type = Column(String, nullable=False, default="text")
     required = Column(Boolean, nullable=False, default=False)

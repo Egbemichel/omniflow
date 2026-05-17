@@ -11,9 +11,7 @@ def test_verify_valid_token_returns_user_info(client, db_session, create_user):
             "institution_id": user.institution_id,
         }
     )
-    response = client.get(
-        "/auth/verify", headers={"Authorization": f"Bearer {token}"}
-    )
+    response = client.get("/auth/verify", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     data = response.json()
     assert data["user_id"] == user.id
@@ -30,7 +28,9 @@ def test_verify_invalid_token_returns_401(client):
 
 
 def test_admin_user_list_is_scoped_by_institution(client, db_session, create_user):
-    admin = create_user(db_session, email="admin@pk.com", role="admin", institution_id=1)
+    admin = create_user(
+        db_session, email="admin@pk.com", role="admin", institution_id=1
+    )
     create_user(db_session, email="staff@pk.com", role="staff", institution_id=1)
     create_user(db_session, email="other@pk.com", role="staff", institution_id=2)
 
@@ -43,9 +43,7 @@ def test_admin_user_list_is_scoped_by_institution(client, db_session, create_use
         }
     )
 
-    response = client.get(
-        "/admin/users", headers={"Authorization": f"Bearer {token}"}
-    )
+    response = client.get("/admin/users", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     emails = {user["email"] for user in response.json()}
     assert "admin@pk.com" in emails
@@ -54,9 +52,15 @@ def test_admin_user_list_is_scoped_by_institution(client, db_session, create_use
 
 
 def test_admin_assign_role_only_within_institution(client, db_session, create_user):
-    admin = create_user(db_session, email="admin@pk.com", role="admin", institution_id=1)
-    target = create_user(db_session, email="target@pk.com", role="end_user", institution_id=1)
-    outsider = create_user(db_session, email="out@pk.com", role="end_user", institution_id=2)
+    admin = create_user(
+        db_session, email="admin@pk.com", role="admin", institution_id=1
+    )
+    target = create_user(
+        db_session, email="target@pk.com", role="end_user", institution_id=1
+    )
+    outsider = create_user(
+        db_session, email="out@pk.com", role="end_user", institution_id=2
+    )
 
     token = create_access_token(
         {

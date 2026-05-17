@@ -16,7 +16,9 @@ from app.services.validation_service import validate_steps
 router = APIRouter()
 
 
-def _get_workflow_or_403(repo: WorkflowRepository, workflow_id: str, institution_id: int):
+def _get_workflow_or_403(
+    repo: WorkflowRepository, workflow_id: str, institution_id: int
+):
     workflow = repo.get_workflow(workflow_id, institution_id)
     if workflow:
         return workflow
@@ -53,7 +55,9 @@ def update_workflow(
     current_user: dict = Depends(require_admin),
 ):
     repo = WorkflowRepository(db)
-    workflow = _get_workflow_or_403(repo, workflow_id, int(current_user["institution_id"]))
+    workflow = _get_workflow_or_403(
+        repo, workflow_id, int(current_user["institution_id"])
+    )
     if workflow.status != "DRAFT":
         raise HTTPException(status_code=409, detail="Workflow is immutable")
     updates = payload.model_dump(exclude_unset=True)
@@ -70,7 +74,9 @@ def list_workflows(
     page_size: int = Query(20, ge=1, le=100),
 ):
     repo = WorkflowRepository(db)
-    total, items = repo.list_workflows(int(current_user["institution_id"]), page, page_size)
+    total, items = repo.list_workflows(
+        int(current_user["institution_id"]), page, page_size
+    )
     payload_items = [
         {
             "workflow_id": wf.id,
@@ -81,7 +87,12 @@ def list_workflows(
         }
         for wf in items
     ]
-    return {"page": page, "page_size": page_size, "total": total, "items": payload_items}
+    return {
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "items": payload_items,
+    }
 
 
 @router.get("/workflows/{workflow_id}", response_model=WorkflowDetailResponse)
@@ -91,7 +102,9 @@ def get_workflow(
     current_user: dict = Depends(require_admin),
 ):
     repo = WorkflowRepository(db)
-    workflow = _get_workflow_or_403(repo, workflow_id, int(current_user["institution_id"]))
+    workflow = _get_workflow_or_403(
+        repo, workflow_id, int(current_user["institution_id"])
+    )
     return workflow
 
 
@@ -102,20 +115,24 @@ def publish_workflow(
     current_user: dict = Depends(require_admin),
 ):
     repo = WorkflowRepository(db)
-    workflow = _get_workflow_or_403(repo, workflow_id, int(current_user["institution_id"]))
+    workflow = _get_workflow_or_403(
+        repo, workflow_id, int(current_user["institution_id"])
+    )
     if workflow.status != "DRAFT":
         raise HTTPException(status_code=409, detail="Workflow is immutable")
 
     steps = repo.list_steps(workflow.id)
-    errors = validate_steps([
-        {
-            "step_name": step.step_name,
-            "assigned_role": step.assigned_role,
-            "step_order": step.step_order,
-            "is_terminal": step.is_terminal,
-        }
-        for step in steps
-    ])
+    errors = validate_steps(
+        [
+            {
+                "step_name": step.step_name,
+                "assigned_role": step.assigned_role,
+                "step_order": step.step_order,
+                "is_terminal": step.is_terminal,
+            }
+            for step in steps
+        ]
+    )
     if errors:
         raise HTTPException(status_code=422, detail={"errors": errors})
 

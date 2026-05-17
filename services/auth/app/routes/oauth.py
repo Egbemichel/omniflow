@@ -4,7 +4,11 @@ from app.database import get_db
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth_schema import OAuthCodeRequest, TokenResponse
 from app.services.jwt_service import create_access_token
-from app.services.oauth_service import OAuthError, exchange_github_code, exchange_google_code
+from app.services.oauth_service import (
+    OAuthError,
+    exchange_github_code,
+    exchange_google_code,
+)
 from app.utils.oauth_config import get_oauth_settings
 
 router = APIRouter()

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class OAuthSettings:
     """OAuth and magic link configuration."""
+
     google_client_id: str
     google_client_secret: str
     github_client_id: str

@@ -55,7 +55,9 @@ def upgrade() -> None:
         sa.Column("step_name", sa.String(), nullable=False),
         sa.Column("assigned_role", sa.String(), nullable=False),
         sa.Column("step_order", sa.Integer(), nullable=False),
-        sa.Column("is_terminal", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+        sa.Column(
+            "is_terminal", sa.Boolean(), nullable=False, server_default=sa.text("false")
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=now_default),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=now_default),
         schema=schema,

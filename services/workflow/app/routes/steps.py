@@ -8,7 +8,9 @@ from app.schemas.workflow_schema import StepCreate, StepOut, StepUpdate
 router = APIRouter()
 
 
-def _get_workflow_or_403(repo: WorkflowRepository, workflow_id: str, institution_id: int):
+def _get_workflow_or_403(
+    repo: WorkflowRepository, workflow_id: str, institution_id: int
+):
     workflow = repo.get_workflow(workflow_id, institution_id)
     if workflow:
         return workflow
@@ -26,7 +28,9 @@ def add_step(
     current_user: dict = Depends(require_admin),
 ):
     repo = WorkflowRepository(db)
-    workflow = _get_workflow_or_403(repo, workflow_id, int(current_user["institution_id"]))
+    workflow = _get_workflow_or_403(
+        repo, workflow_id, int(current_user["institution_id"])
+    )
     if workflow.status != "DRAFT":
         raise HTTPException(status_code=409, detail="Workflow is immutable")
     return repo.add_step(
@@ -45,7 +49,9 @@ def list_steps(
     current_user: dict = Depends(require_admin),
 ):
     repo = WorkflowRepository(db)
-    workflow = _get_workflow_or_403(repo, workflow_id, int(current_user["institution_id"]))
+    workflow = _get_workflow_or_403(
+        repo, workflow_id, int(current_user["institution_id"])
+    )
     return repo.list_steps(workflow.id)
 
 
@@ -58,7 +64,9 @@ def update_step(
     current_user: dict = Depends(require_admin),
 ):
     repo = WorkflowRepository(db)
-    workflow = _get_workflow_or_403(repo, workflow_id, int(current_user["institution_id"]))
+    workflow = _get_workflow_or_403(
+        repo, workflow_id, int(current_user["institution_id"])
+    )
     if workflow.status != "DRAFT":
         raise HTTPException(status_code=409, detail="Workflow is immutable")
     step = repo.get_step(step_id, workflow.id)
@@ -79,7 +87,9 @@ def delete_step(
     current_user: dict = Depends(require_admin),
 ):
     repo = WorkflowRepository(db)
-    workflow = _get_workflow_or_403(repo, workflow_id, int(current_user["institution_id"]))
+    workflow = _get_workflow_or_403(
+        repo, workflow_id, int(current_user["institution_id"])
+    )
     if workflow.status != "DRAFT":
         raise HTTPException(status_code=409, detail="Workflow is immutable")
     step = repo.get_step(step_id, workflow.id)

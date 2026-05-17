@@ -11,16 +11,21 @@ import redis
 @dataclass
 class MagicLinkConfig:
     """Configuration for magic link token handling."""
+
     redis_url: str
     secret: str
     ttl_seconds: int
 
 
 class MagicLinkService:
-    def __init__(self, config: MagicLinkConfig, redis_client: Optional[redis.Redis] = None):
+    def __init__(
+        self, config: MagicLinkConfig, redis_client: Optional[redis.Redis] = None
+    ):
         """Create a magic link service backed by Redis."""
         self.config = config
-        self.redis = redis_client or redis.Redis.from_url(config.redis_url, decode_responses=True)
+        self.redis = redis_client or redis.Redis.from_url(
+            config.redis_url, decode_responses=True
+        )
 
     def generate_token(self, email: str) -> str:
         """Generate and store a signed magic link token for an email."""
@@ -44,7 +49,9 @@ class MagicLinkService:
 
     def _sign(self, token_id: str) -> str:
         """Create a signature for a token id."""
-        digest = hmac.new(self.config.secret.encode("utf-8"), token_id.encode("utf-8"), hashlib.sha256).digest()
+        digest = hmac.new(
+            self.config.secret.encode("utf-8"), token_id.encode("utf-8"), hashlib.sha256
+        ).digest()
         return base64.urlsafe_b64encode(digest).decode("utf-8").rstrip("=")
 
     def _valid_signature(self, token_id: str, signature: str) -> bool:

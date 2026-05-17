@@ -2,7 +2,9 @@ from app.repositories.user_repository import UserRepository
 from app.services.jwt_service import decode_token
 
 
-def test_magic_link_request_and_verify_flow(client_with_magic_link_override, db_session):
+def test_magic_link_request_and_verify_flow(
+    client_with_magic_link_override, db_session
+):
     request = client_with_magic_link_override.post(
         "/auth/magic-link/request",
         json={"email": "magic@pk.com"},

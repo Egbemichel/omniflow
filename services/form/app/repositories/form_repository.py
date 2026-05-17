@@ -43,7 +43,9 @@ class FormRepository:
     def get_form_any(self, form_id: str) -> Optional[Form]:
         return self.session.query(Form).filter(Form.id == form_id).first()
 
-    def list_forms(self, institution_id: int, page: int, page_size: int) -> Tuple[int, List[Form]]:
+    def list_forms(
+        self, institution_id: int, page: int, page_size: int
+    ) -> Tuple[int, List[Form]]:
         query = self.session.query(Form).filter(Form.institution_id == institution_id)
         total = query.count()
         items = (

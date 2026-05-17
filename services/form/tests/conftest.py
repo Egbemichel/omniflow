@@ -85,7 +85,12 @@ def upload_dir(tmp_path, monkeypatch):
 
 @pytest.fixture
 def admin_user():
-    return {"user_id": 10, "email": "admin@pk.com", "role": "admin", "institution_id": 1}
+    return {
+        "user_id": 10,
+        "email": "admin@pk.com",
+        "role": "admin",
+        "institution_id": 1,
+    }
 
 
 @pytest.fixture

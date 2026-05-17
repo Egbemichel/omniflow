@@ -5,6 +5,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
+
 _ALEMBIC_DIR = Path(__file__).resolve().parent
 _SERVICE_ROOT = _ALEMBIC_DIR.parent
 
