@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
-from app import models
+from app import models  # noqa: F401  # registers models with Base.metadata
 from app.database import Base, engine
 from app.routes.api import router
 from app.services.event_service import EventService

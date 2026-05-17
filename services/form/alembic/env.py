@@ -11,9 +11,8 @@ _SERVICE_ROOT = _ALEMBIC_DIR.parent
 _s = str(_SERVICE_ROOT)
 if _s not in sys.path:
     sys.path.insert(0, _s)
-
-from app.database import Base
-from app import models
+from app.database import Base  # noqa: E402
+from app import models  # noqa: E402, F401  # registers models with Base.metadata
 
 config = context.config
 
