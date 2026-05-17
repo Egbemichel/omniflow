@@ -1,31 +1,54 @@
+# services/workflow/tests/conftest.py
 import os
 import sys
-import uuid
 from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
+# ---------------------------------------------------------------------------
+# Path bootstrap
+# ---------------------------------------------------------------------------
 _TESTS_DIR = Path(__file__).resolve().parent
-_WORKFLOW_ROOT = _TESTS_DIR.parent
+_APP_ROOT = _TESTS_DIR.parent / "app"
 
-_s = str(_WORKFLOW_ROOT)
-if _s not in sys.path:
-    sys.path.insert(0, _s)
+if str(_APP_ROOT.parent) not in sys.path:
+    sys.path.insert(0, str(_APP_ROOT.parent))
 
-TEST_DB_URL = "sqlite:///./test_workflow.db"
-
-os.environ.setdefault("DATABASE_URL", TEST_DB_URL)
-os.environ.setdefault("AUTH_SERVICE_URL", "http://auth:8001")
+# ---------------------------------------------------------------------------
+# Environment defaults
+# ---------------------------------------------------------------------------
+os.environ.setdefault("JWT_SECRET", "test_secret")
+os.environ.setdefault("AUTH_SERVICE_URL", "http://localhost:8000")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
-from app.main import app  # noqa: E402
+# ---------------------------------------------------------------------------
+# Local imports
+# ---------------------------------------------------------------------------
 from app.database import Base, get_db  # noqa: E402
-from app.repositories.workflow_repository import WorkflowRepository  # noqa: E402
-from app.routes.dependencies import get_current_user  # noqa: E402
+from app.main import app  # noqa: E402
+from app.models.workflow import Workflow, WorkflowStep  # noqa: F401, E402
+
+# ---------------------------------------------------------------------------
+# SQLite test DB — strip schema prefixes so SQLite doesn't choke on
+# "CREATE TABLE workflow.workflows" (SQLite has no schema support).
+# ---------------------------------------------------------------------------
+TEST_DB_URL = "sqlite:///./test_workflow.db"
 
 engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
+
+
+def _strip_schema(target, connection, **kw):
+    """Remove schema from table name before SQLite DDL executes."""
+    target.schema = None
+
+
+# Apply the schema-stripping listener to every Table in metadata
+for table in Base.metadata.tables.values():
+    event.listen(table, "before_create", _strip_schema)
+
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -37,8 +60,36 @@ def override_get_db():
         db.close()
 
 
+# ---------------------------------------------------------------------------
+# Auth dependency override — no live Auth Service needed in tests
+# ---------------------------------------------------------------------------
+ADMIN_USER = {"id": 1, "email": "admin@test.com", "role": "admin", "institution_id": 1}
+STAFF_USER = {"id": 2, "email": "staff@test.com", "role": "staff", "institution_id": 1}
+OTHER_INST_USER = {
+    "id": 3,
+    "email": "other@test.com",
+    "role": "admin",
+    "institution_id": 2,
+}
+
+
+def make_auth_override(user: dict):
+    def _override():
+        return user
+
+    return _override
+
+
+# ---------------------------------------------------------------------------
+# Session-scoped DB setup / teardown
+# ---------------------------------------------------------------------------
 @pytest.fixture(scope="session", autouse=True)
 def setup_db():
+    """Create all tables once, drop after session."""
+    # Re-strip schema on all tables in case metadata was re-imported
+    for table in Base.metadata.tables.values():
+        table.schema = None
+
     Base.metadata.create_all(bind=engine)
     app.dependency_overrides[get_db] = override_get_db
     yield
@@ -46,12 +97,12 @@ def setup_db():
     engine.dispose()
     db_file = Path("test_workflow.db")
     if db_file.exists():
-        try:
-            db_file.unlink()
-        except PermissionError:
-            pass
+        db_file.unlink(missing_ok=True)
 
 
+# ---------------------------------------------------------------------------
+# Per-test isolation
+# ---------------------------------------------------------------------------
 @pytest.fixture(autouse=True)
 def clean_db():
     yield
@@ -61,10 +112,40 @@ def clean_db():
         conn.commit()
 
 
+# ---------------------------------------------------------------------------
+# Core fixtures
+# ---------------------------------------------------------------------------
 @pytest.fixture
 def client():
+    """HTTP client authenticated as admin (institution_id=1)."""
+    from app.routes.dependencies import get_current_user
+
+    app.dependency_overrides[get_current_user] = make_auth_override(ADMIN_USER)
     with TestClient(app) as c:
         yield c
+    app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.fixture
+def staff_client():
+    """HTTP client authenticated as staff (institution_id=1)."""
+    from app.routes.dependencies import get_current_user
+
+    app.dependency_overrides[get_current_user] = make_auth_override(STAFF_USER)
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.fixture
+def other_inst_client():
+    """HTTP client authenticated as admin of a different institution."""
+    from app.routes.dependencies import get_current_user
+
+    app.dependency_overrides[get_current_user] = make_auth_override(OTHER_INST_USER)
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.fixture
@@ -76,95 +157,62 @@ def db_session():
         db.close()
 
 
+# ---------------------------------------------------------------------------
+# Workflow factory helpers
+# ---------------------------------------------------------------------------
 @pytest.fixture
-def admin_user():
-    return {
-        "user_id": 42,
-        "email": "admin@pk.com",
-        "role": "admin",
-        "institution_id": 1,
-    }
+def create_workflow():
+    """Factory: create a workflow row directly in the DB."""
 
-
-@pytest.fixture
-def staff_user():
-    return {
-        "user_id": 43,
-        "email": "staff@pk.com",
-        "role": "staff",
-        "institution_id": 1,
-    }
-
-
-@pytest.fixture
-def other_admin_user():
-    return {
-        "user_id": 99,
-        "email": "admin@other.com",
-        "role": "admin",
-        "institution_id": 2,
-    }
-
-
-@pytest.fixture
-def admin_client(admin_user):
-    app.dependency_overrides[get_current_user] = lambda: admin_user
-    with TestClient(app) as c:
-        yield c
-    app.dependency_overrides.pop(get_current_user, None)
-
-
-@pytest.fixture
-def staff_client(staff_user):
-    app.dependency_overrides[get_current_user] = lambda: staff_user
-    with TestClient(app) as c:
-        yield c
-    app.dependency_overrides.pop(get_current_user, None)
-
-
-@pytest.fixture
-def create_workflow(db_session):
     def _create(
+        session,
+        name: str = "Test Workflow",
         institution_id: int = 1,
-        admin_id: int = 42,
-        name: str = "Flow",
-        description: str | None = None,
-        form_id: str | None = None,
+        admin_id: int = 1,
         status: str = "DRAFT",
-    ):
-        repo = WorkflowRepository(db_session)
-        workflow_id = str(uuid.uuid4())
-        workflow = repo.create_workflow(
-            workflow_id=workflow_id,
+    ) -> Workflow:
+        import uuid
+
+        wf = Workflow(
+            id=str(uuid.uuid4()),
+            name=name,
             institution_id=institution_id,
             admin_id=admin_id,
-            name=name,
-            description=description,
-            form_id=form_id,
+            status=status,
         )
-        if status == "PUBLISHED":
-            repo.publish(workflow)
-        return workflow
+        session.add(wf)
+        session.commit()
+        session.refresh(wf)
+        return wf
 
     return _create
 
 
 @pytest.fixture
-def add_step(db_session):
-    def _add(
+def create_step():
+    """Factory: create a workflow step row directly in the DB."""
+
+    def _create(
+        session,
         workflow_id: str,
-        step_name: str,
-        assigned_role: str,
-        step_order: int,
-        is_terminal: bool = False,
-    ):
-        repo = WorkflowRepository(db_session)
-        return repo.add_step(
+        step_name: str = "Review",
+        assigned_role: str = "staff",
+        step_order: int = 1,
+        is_terminal: bool = True,
+    ) -> WorkflowStep:
+        import uuid
+
+        step = WorkflowStep(
+            id=str(uuid.uuid4()),
             workflow_id=workflow_id,
             step_name=step_name,
             assigned_role=assigned_role,
             step_order=step_order,
             is_terminal=is_terminal,
         )
+        session.add(step)
+        session.commit()
+        session.refresh(step)
+        return step
 
-    return _add
+    return _create

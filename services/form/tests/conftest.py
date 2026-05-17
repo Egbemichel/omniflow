@@ -1,19 +1,26 @@
+# services/form/tests/conftest.py
 import os
 import sys
 import uuid
 from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
+# ---------------------------------------------------------------------------
+# Path bootstrap
+# ---------------------------------------------------------------------------
 _TESTS_DIR = Path(__file__).resolve().parent
 _FORM_ROOT = _TESTS_DIR.parent
 
-_s = str(_FORM_ROOT)
-if _s not in sys.path:
-    sys.path.insert(0, _s)
+if str(_FORM_ROOT) not in sys.path:
+    sys.path.insert(0, str(_FORM_ROOT))
 
+# ---------------------------------------------------------------------------
+# Environment defaults (before app import so settings load cleanly)
+# ---------------------------------------------------------------------------
 TEST_DB_URL = "sqlite:///./test_form.db"
 
 os.environ.setdefault("DATABASE_URL", TEST_DB_URL)
@@ -21,12 +28,30 @@ os.environ.setdefault("AUTH_SERVICE_URL", "http://auth:8001")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 os.environ.setdefault("MAX_FILE_SIZE_MB", "20")
 
-from app.main import app  # noqa: E402
+# ---------------------------------------------------------------------------
+# Local imports
+# ---------------------------------------------------------------------------
 from app.database import Base, get_db  # noqa: E402
-from app.routes.dependencies import get_current_user  # noqa: E402
+from app.main import app  # noqa: E402
+from app.models.form import Form, FormField  # noqa: F401, E402
 from app.repositories.form_repository import FormRepository  # noqa: E402
+from app.routes.dependencies import get_current_user  # noqa: E402
 
+# ---------------------------------------------------------------------------
+# SQLite test DB — strip schema prefixes so SQLite doesn't choke on
+# "CREATE TABLE form.forms" (SQLite has no schema support).
+# ---------------------------------------------------------------------------
 engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
+
+
+def _strip_schema(target, connection, **kw):
+    """Null out schema before SQLite DDL so it doesn't generate 'form.forms'."""
+    target.schema = None
+
+
+for _table in Base.metadata.tables.values():
+    event.listen(_table, "before_create", _strip_schema)
+
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -38,8 +63,15 @@ def override_get_db():
         db.close()
 
 
+# ---------------------------------------------------------------------------
+# Session-scoped DB setup / teardown
+# ---------------------------------------------------------------------------
 @pytest.fixture(scope="session", autouse=True)
 def setup_db():
+    # Null schema directly as well, in case listener fires after re-import
+    for table in Base.metadata.tables.values():
+        table.schema = None
+
     Base.metadata.create_all(bind=engine)
     app.dependency_overrides[get_db] = override_get_db
     yield
@@ -47,12 +79,12 @@ def setup_db():
     engine.dispose()
     db_file = Path("test_form.db")
     if db_file.exists():
-        try:
-            db_file.unlink()
-        except PermissionError:
-            pass
+        db_file.unlink(missing_ok=True)
 
 
+# ---------------------------------------------------------------------------
+# Per-test isolation
+# ---------------------------------------------------------------------------
 @pytest.fixture(autouse=True)
 def clean_db():
     yield
@@ -62,6 +94,9 @@ def clean_db():
         conn.commit()
 
 
+# ---------------------------------------------------------------------------
+# Core fixtures
+# ---------------------------------------------------------------------------
 @pytest.fixture
 def client():
     with TestClient(app) as c:
@@ -83,6 +118,9 @@ def upload_dir(tmp_path, monkeypatch):
     return tmp_path
 
 
+# ---------------------------------------------------------------------------
+# Auth fixtures
+# ---------------------------------------------------------------------------
 @pytest.fixture
 def admin_user():
     return {
@@ -114,6 +152,23 @@ def user_client():
     app.dependency_overrides.pop(get_current_user, None)
 
 
+@pytest.fixture
+def other_inst_client():
+    """Client authenticated as admin of a different institution."""
+    app.dependency_overrides[get_current_user] = lambda: {
+        "user_id": 99,
+        "email": "other@pk.com",
+        "role": "admin",
+        "institution_id": 2,
+    }
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.pop(get_current_user, None)
+
+
+# ---------------------------------------------------------------------------
+# Form factory
+# ---------------------------------------------------------------------------
 @pytest.fixture
 def create_form(db_session):
     def _create(
