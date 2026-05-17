@@ -11,4 +11,5 @@ def verify_token(current_user=Depends(get_current_user)):
         "user_id": current_user.id,
         "email": current_user.email,
         "role": current_user.role,
+        "institution_id": current_user.institution_id,
     }

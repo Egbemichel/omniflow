@@ -19,6 +19,7 @@ def test_verify_valid_token_returns_user_info(client, db_session, create_user):
     assert data["user_id"] == user.id
     assert data["email"] == user.email
     assert data["role"] == user.role
+    assert data["institution_id"] == user.institution_id
 
 
 def test_verify_invalid_token_returns_401(client):

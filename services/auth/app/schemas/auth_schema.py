@@ -23,3 +23,4 @@ class TokenVerifyResponse(BaseModel):
     user_id: str
     email: EmailStr
     role: str
+    institution_id: int
