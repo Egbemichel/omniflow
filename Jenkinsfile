@@ -1,108 +1,246 @@
+// Jenkinsfile — place at repo ROOT
+// Requires: Multibranch Pipeline job in Jenkins
+// Fix: Each stage runs inside a Docker container — Jenkins server needs NO local Python/pip
+// Branch behaviour:
+//   feature/* and develop → lint + test + docker build check (no deploy)
+//   main                  → lint + test + build + push + deploy to K8s
+
 pipeline {
+    // Default agent — overridden per stage where Docker is needed
     agent any
-    options {
-        timestamps()
-    }
+
     environment {
-        DATABASE_URL = "postgresql://pk_user:pk_password@localhost:5432/paper_killer_test"
-        REDIS_URL = "redis://localhost:6379/0"
-        JWT_SECRET = "test_secret_key_not_for_production"
-        JWT_ALGORITHM = "HS256"
-        JWT_EXPIRE_MINUTES = "60"
-        AUTH_SERVICE_URL = "http://localhost:8001"
-        WORKFLOW_SERVICE_URL = "http://localhost:8003"
-        PIP_DISABLE_PIP_VERSION_CHECK = "1"
-        PYTHONUNBUFFERED = "1"
+        GHCR_USER    = credentials('ghcr-username')
+        GHCR_TOKEN   = credentials('ghcr-token')
+        IMAGE_PREFIX = "ghcr.io/${GHCR_USER}/paper-killer"
+        KUBECONFIG   = credentials('kubeconfig')
+        IMAGE_TAG    = "${env.GIT_COMMIT[0..7]}"
     }
+
     stages {
-        stage("Lint") {
+
+        // ─── STAGE 1: LINT ───────────────────────────────────────────────────
+        // Runs inside python:3.12-slim — Jenkins needs nothing installed locally
+        stage('Lint & Security Scan') {
+            agent {
+                docker {
+                    image 'python:3.12-slim'
+                    // Reuse the Jenkins workspace so the checked-out code is available
+                    reuseNode true
+                }
+            }
             steps {
-                sh "python3 -m pip install --upgrade pip"
-                sh "python3 -m pip install ruff bandit pip-audit"
-                sh "ruff check services/"
-                sh "ruff format --check services/"
-                sh "bandit -r services/ -ll --exclude services/auth/tests,services/form/tests,services/workflow/tests,services/task/tests,services/notification/tests"
-                sh """
+                sh '''
+                    pip install ruff bandit pip-audit --quiet --no-cache-dir
+
+                    echo "--- Ruff linter ---"
+                    ruff check services/
+
+                    echo "--- Ruff format check ---"
+                    ruff format --check services/
+
+                    echo "--- Bandit security scan ---"
+                    bandit -r services/ -ll -x services/*/tests/ -q
+
+                    echo "--- pip-audit CVE check ---"
                     for svc in auth form workflow task notification; do
-                        echo "Auditing ${svc}..."
-                        (cd services/${svc} && pip-audit \
-                            --ignore-vuln CVE-2026-30922 \
-                            --ignore-vuln CVE-2025-62727 \
-                            --ignore-vuln CVE-2024-47874 \
-                            --ignore-vuln CVE-2025-54121)
+                        echo "Auditing $svc..."
+                        pip-audit -r services/$svc/requirements.txt --no-progress
                     done
-                """
+                '''
             }
         }
-        stage("Tests") {
+
+        // ─── STAGE 2: TESTS ──────────────────────────────────────────────────
+        // Runs inside python:3.12-slim with network access to postgres and redis
+        // The postgres and redis containers are started via docker commands
+        // (Jenkins agent has Docker socket access)
+        stage('Tests') {
             steps {
-                sh """
-                    docker rm -f pk-postgres-test pk-redis-test pk-ci-network >/dev/null 2>&1 || true
-                    docker network create pk-ci-network
-                    docker run -d --name pk-postgres-test --network pk-ci-network \
+                sh '''
+                    # Create isolated network for this build
+                    docker network create pk-ci-network || true
+
+                    # Start real PostgreSQL
+                    docker run -d \
+                        --name pk-postgres-test \
+                        --network pk-ci-network \
                         -e POSTGRES_USER=pk_user \
                         -e POSTGRES_PASSWORD=pk_password \
                         -e POSTGRES_DB=paper_killer_test \
-                        -p 5432:5432 \
                         postgres:16-alpine
-                    docker run -d --name pk-redis-test --network pk-ci-network \
-                        -p 6379:6379 \
+
+                    # Start real Redis
+                    docker run -d \
+                        --name pk-redis-test \
+                        --network pk-ci-network \
                         redis:7-alpine
 
-                    echo "Waiting for Postgres..."
-                    until docker exec pk-postgres-test pg_isready -U pk_user >/dev/null 2>&1; do
+                    # Wait for postgres to be ready
+                    echo "Waiting for postgres..."
+                    for i in $(seq 1 15); do
+                        docker exec pk-postgres-test pg_isready -U pk_user && break
                         sleep 2
                     done
 
-                    echo "Waiting for Redis..."
-                    until docker exec pk-redis-test redis-cli ping | grep -q PONG; do
-                        sleep 2
+                    # Run tests for each service sequentially in python container
+                    # (parallel would need more complex job tracking inside Docker)
+                    FAILED=0
+                    for svc in auth form workflow task notification; do
+                        echo "====== Testing $svc ======"
+                        docker run --rm \
+                            --network pk-ci-network \
+                            -v $(pwd)/services/$svc:/app \
+                            -w /app \
+                            -e DATABASE_URL=postgresql://pk_user:pk_password@pk-postgres-test:5432/paper_killer_test \
+                            -e DATABASE_SCHEMA=${svc}_schema \
+                            -e REDIS_URL=redis://pk-redis-test:6379/0 \
+                            -e JWT_SECRET=test_secret_key \
+                            -e JWT_ALGORITHM=HS256 \
+                            -e JWT_EXPIRE_MINUTES=60 \
+                            -e AUTH_SERVICE_URL=http://localhost:8001 \
+                            -e WORKFLOW_SERVICE_URL=http://localhost:8003 \
+                            python:3.12-slim \
+                            sh -c "
+                                pip install -r requirements.txt --quiet --no-cache-dir &&
+                                pip install pytest pytest-asyncio pytest-cov pytest-mock httpx --quiet --no-cache-dir &&
+                                alembic upgrade head &&
+                                PYTHONPATH=. pytest tests/ -v \
+                                    --cov=app \
+                                    --cov-report=term-missing \
+                                    --cov-report=xml:/app/coverage.xml \
+                                    --cov-fail-under=85
+                            " || FAILED=1
+
+                        echo "====== $svc done ======"
                     done
-                """
-                script {
-                    def services = ["auth", "workflow", "task"]
-                    def branches = [:]
-                    for (svc in services) {
-                        def serviceName = svc
-                        branches[serviceName] = {
-                            sh """
-                                cd services/${serviceName}
-                                python3 -m pip install -r requirements.txt
-                                python3 -m pip install pytest pytest-asyncio pytest-cov pytest-mock httpx
-                                DATABASE_SCHEMA=${serviceName}_schema alembic upgrade head
-                                DATABASE_SCHEMA=${serviceName}_schema \
-                                    PYTHONPATH=. \
-                                    pytest tests/ -v \
-                                      --cov=app \
-                                      --cov-report=term-missing \
-                                      --cov-report=xml:coverage.xml \
-                                      --cov-fail-under=85
-                            """
-                        }
-                    }
-                    parallel branches
+
+                    # Cleanup test containers
+                    docker rm -f pk-postgres-test pk-redis-test || true
+                    docker network rm pk-ci-network || true
+
+                    if [ $FAILED -ne 0 ]; then
+                        echo "One or more services failed tests or coverage gate"
+                        exit 1
+                    fi
+                '''
+            }
+            post {
+                always {
+                    // Copy coverage reports out of mounted volumes for archiving
+                    junit allowEmptyResults: true, testResults: 'services/*/coverage.xml'
+                    // Clean up in case of failure mid-loop
+                    sh '''
+                        docker rm -f pk-postgres-test pk-redis-test 2>/dev/null || true
+                        docker network rm pk-ci-network 2>/dev/null || true
+                    '''
                 }
             }
         }
-        stage("Docker Build") {
+
+        // ─── STAGE 3: DOCKER BUILD VALIDATION ───────────────────────────────
+        // Runs on Jenkins agent directly (docker CLI is available on agent)
+        stage('Docker Build') {
             steps {
-                sh """
-                    docker build -t pk-auth:test ./services/auth
-                    docker build -t pk-form:test ./services/form
-                    docker build -t pk-workflow:test ./services/workflow
-                    docker build -t pk-task:test ./services/task
-                    docker build -t pk-notification:test ./services/notification
+                sh '''
+                    echo "Building all service images..."
+                    docker build -t pk-auth:${IMAGE_TAG}         ./services/auth
+                    docker build -t pk-form:${IMAGE_TAG}         ./services/form
+                    docker build -t pk-workflow:${IMAGE_TAG}     ./services/workflow
+                    docker build -t pk-task:${IMAGE_TAG}         ./services/task
+                    docker build -t pk-notification:${IMAGE_TAG} ./services/notification
+                    docker build -t pk-frontend:${IMAGE_TAG}     ./frontend
+
+                    echo "All images built successfully"
                     docker images | grep pk-
-                """
+                '''
+            }
+        }
+
+        // ─── STAGE 4: PUSH TO REGISTRY (main only) ──────────────────────────
+        stage('Push Images') {
+            when { branch 'main' }
+            steps {
+                sh '''
+                    echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USER --password-stdin
+
+                    for svc in auth form workflow task notification frontend; do
+                        docker tag pk-${svc}:${IMAGE_TAG} ${IMAGE_PREFIX}-${svc}:${IMAGE_TAG}
+                        docker tag pk-${svc}:${IMAGE_TAG} ${IMAGE_PREFIX}-${svc}:latest
+                        docker push ${IMAGE_PREFIX}-${svc}:${IMAGE_TAG}
+                        docker push ${IMAGE_PREFIX}-${svc}:latest
+                        echo "Pushed ${svc} → ${IMAGE_TAG}"
+                    done
+                '''
+            }
+        }
+
+        // ─── STAGE 5: DEPLOY TO KUBERNETES (main only) ──────────────────────
+        stage('Deploy to Kubernetes') {
+            when { branch 'main' }
+            agent {
+                docker {
+                    // bitnami/kubectl has kubectl pre-installed — no install needed
+                    image 'bitnami/kubectl:latest'
+                    reuseNode true
+                }
+            }
+            steps {
+                sh '''
+                    for svc in auth form workflow task notification frontend; do
+                        kubectl set image \
+                            deployment/pk-${svc} \
+                            pk-${svc}=${IMAGE_PREFIX}-${svc}:${IMAGE_TAG}
+                        echo "Updated: pk-${svc}"
+                    done
+
+                    for svc in auth form workflow task notification frontend; do
+                        kubectl rollout status deployment/pk-${svc} --timeout=300s
+                    done
+                '''
+            }
+        }
+
+        // ─── STAGE 6: SMOKE TESTS (main only) ───────────────────────────────
+        stage('Smoke Tests') {
+            when { branch 'main' }
+            steps {
+                sh '''
+                    sleep 15
+                    for port in 8001 8002 8003 8004 8005; do
+                        STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${port}/health)
+                        if [ "$STATUS" != "200" ]; then
+                            echo "SMOKE TEST FAILED: port ${port} returned ${STATUS}"
+                            exit 1
+                        fi
+                        echo "Health check passed: port ${port}"
+                    done
+                    echo "All smoke tests passed"
+                '''
             }
         }
     }
+
     post {
+        failure {
+            script {
+                if (env.BRANCH_NAME == 'main') {
+                    sh '''
+                        echo "Build failed on main — rolling back all deployments"
+                        for svc in auth form workflow task notification frontend; do
+                            kubectl rollout undo deployment/pk-${svc} || true
+                        done
+                    '''
+                }
+            }
+        }
         always {
-            sh """
-                docker rm -f pk-postgres-test pk-redis-test >/dev/null 2>&1 || true
-                docker network rm pk-ci-network >/dev/null 2>&1 || true
-            """
+            sh '''
+                docker rmi $(docker images "pk-*" -q) --force 2>/dev/null || true
+            '''
+        }
+        success {
+            echo "Pipeline completed for branch: ${env.BRANCH_NAME}"
         }
     }
 }
