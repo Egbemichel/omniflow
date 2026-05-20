@@ -29,23 +29,23 @@ pipeline {
             }
             steps {
                 sh '''
-    pip install ruff bandit pip-audit --quiet --no-cache-dir --root-user-action=ignore
+                    pip install ruff bandit pip-audit --quiet --no-cache-dir --root-user-action=ignore
 
-    echo "--- Ruff linter ---"
-    ruff check services/
+                    echo "--- Ruff linter ---"
+                    ruff check services/
 
-    echo "--- Ruff format check ---"
-    ruff format --check services/
+                    echo "--- Ruff format check ---"
+                    ruff format --check services/
 
-    echo "--- Bandit security scan ---"
-    bandit -r services/ -ll -x services/auth/tests,services/form/tests,services/workflow/tests -q
+                    echo "--- Bandit security scan ---"
+                    bandit -r services/ -ll -x services/auth/tests,services/form/tests,services/workflow/tests -q
 
-    echo "--- pip-audit CVE check ---"
-    for svc in auth form workflow; do
-        echo "Auditing $svc..."
-        pip-audit -r services/$svc/requirements.txt --no-progress
-    done
-'''
+                    echo "--- pip-audit CVE check ---"
+                    for svc in auth form workflow; do
+                        echo "Auditing $svc..."
+                        pip-audit -r services/$svc/requirements.txt --no-progress
+                    done
+                '''
             }
         }
 
