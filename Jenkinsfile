@@ -83,7 +83,7 @@ pipeline {
                         echo "====== Testing $svc ======"
                         docker run --rm \
                             --network pk-ci-network \
-                            -v $(pwd)/services/$svc:/app \
+                            -v ${WORKSPACE}/services/$svc:/app \
                             -w /app \
                             -e DATABASE_URL=postgresql://pk_user:pk_password@pk-postgres-test:5432/paper_killer_test \
                             -e DATABASE_SCHEMA=${svc}_schema \
