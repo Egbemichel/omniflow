@@ -43,7 +43,7 @@ pipeline {
                     echo "--- pip-audit CVE check ---"
                     for svc in auth form workflow; do
                         echo "Auditing $svc..."
-                        pip-audit -r services/$svc/requirements.txt --no-progress
+                        pip-audit -r services/$svc/requirements.txt --progress-spinner off
                     done
                 '''
             }
