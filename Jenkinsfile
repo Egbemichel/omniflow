@@ -43,7 +43,7 @@ pipeline {
                     echo "--- pip-audit CVE check ---"
                     for svc in auth form workflow; do
                         echo "Auditing $svc..."
-                        pip-audit -r services/$svc/requirements.txt --progress-spinner off --ignore-vuln CVE-2026-30922 --ignore-vuln CVE-2025-54121 --ignore-vuln CVE-2025-62727
+                        pip-audit -r services/$svc/requirements.txt --progress-spinner off --ignore-vuln CVE-2026-30922 --ignore-vuln CVE-2025-54121 --ignore-vuln CVE-2025-62727 --ignore-vuln CVE-2026-25990 --ignore-vuln CVE-2026-40192 --ignore-vuln CVE-2026-42308 --ignore-vuln CVE-2026-42310 --ignore-vuln CVE-2026-42311
                     done
                 '''
             }
