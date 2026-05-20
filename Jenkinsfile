@@ -24,6 +24,7 @@ pipeline {
                 docker {
                     image 'python:3.12-slim'
                     reuseNode true
+                    args '-u root'
                 }
             }
             steps {
@@ -172,6 +173,7 @@ pipeline {
         //         docker {
         //             image 'bitnami/kubectl:latest'
         //             reuseNode true
+        //             args '-u root'
         //         }
         //     }
         //     environment {
