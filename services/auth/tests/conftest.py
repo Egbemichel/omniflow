@@ -24,6 +24,7 @@ if _s not in sys.path:
 # ---------------------------------------------------------------------------
 # Environment defaults — set before importing app so settings load cleanly.
 # ---------------------------------------------------------------------------
+os.environ["DATABASE_URL"] = "sqlite:///./test_auth.db"
 os.environ.setdefault("JWT_SECRET", "test_secret")
 os.environ.setdefault("MAGIC_LINK_SECRET", "magic_secret")
 os.environ.setdefault("MAGIC_LINK_TTL_SECONDS", "900")
@@ -64,10 +65,13 @@ def override_get_db():
 # ---------------------------------------------------------------------------
 @pytest.fixture(scope="session", autouse=True)
 def setup_db():
-    """Create all tables once for the test session, drop after."""
-    Base.metadata.create_all(bind=engine)
+    """Database setup: Alembic migrations handle schema creation.
+    This fixture exists only for cleanup after tests.
+    """
+    # Don't call Base.metadata.create_all() — Alembic handles it
     app.dependency_overrides[get_db] = override_get_db
     yield
+    # Cleanup: drop all tables after session
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
     db_file = Path("test_auth.db")

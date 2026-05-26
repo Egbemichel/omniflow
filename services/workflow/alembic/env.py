@@ -55,14 +55,18 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
-        connection.execute(text(f"SET search_path TO {schema}"))
-        connection.commit()
+        if connectable.dialect.name == "postgresql":
+            connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+            connection.execute(text(f"SET search_path TO {schema}"))
+            connection.commit()
+
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            version_table_schema=schema,
-            include_schemas=True,
+            version_table_schema=schema
+            if connectable.dialect.name == "postgresql"
+            else None,
+            include_schemas=True if connectable.dialect.name == "postgresql" else False,
         )
         with context.begin_transaction():
             context.run_migrations()

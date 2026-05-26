@@ -15,18 +15,16 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Create the schema first (Postgres only)
     bind = op.get_bind()
     is_sqlite = bind.dialect.name == "sqlite"
-    schema = None if is_sqlite else "form_schema"
-
     if not is_sqlite:
-        # Create schema first
         op.execute("CREATE SCHEMA IF NOT EXISTS form_schema")
-        # Set search path for subsequent operations
+        # Set search_path so subsequent operations target form_schema
         op.execute("SET search_path TO form_schema")
 
     id_default = None if is_sqlite else sa.text("gen_random_uuid()")
-    now_default = None if is_sqlite else sa.text("now()")
+    now_default = sa.text("(CURRENT_TIMESTAMP)") if is_sqlite else sa.text("now()")
 
     op.create_table(
         "forms",
@@ -39,7 +37,6 @@ def upgrade() -> None:
         sa.Column("status", sa.String(), nullable=False, server_default="UPLOADED"),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=now_default),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=now_default),
-        schema=schema,
     )
 
     op.create_table(
@@ -49,7 +46,7 @@ def upgrade() -> None:
             "form_id",
             sa.String(),
             sa.ForeignKey(
-                "form_schema.forms.id" if not is_sqlite else "forms.id",
+                "forms.id",
                 ondelete="CASCADE",
             ),
             nullable=False,
@@ -61,7 +58,6 @@ def upgrade() -> None:
         ),
         sa.Column("position", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=now_default),
-        schema=schema,
     )
 
 
@@ -69,11 +65,9 @@ def downgrade() -> None:
     # Set search_path to the target schema for cleanup.
     op.execute("SET search_path TO form_schema")
 
-    bind = op.get_bind()
-    is_sqlite = bind.dialect.name == "sqlite"
-    schema = None if is_sqlite else "form_schema"
+    op.drop_table("form_fields")
+    op.drop_table("forms")
 
-    op.drop_table("form_fields", schema=schema)
-    op.drop_table("forms", schema=schema)
-    if not is_sqlite:
+    bind = op.get_bind()
+    if bind.dialect.name != "sqlite":
         op.execute("DROP SCHEMA IF EXISTS form_schema")

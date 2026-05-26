@@ -69,26 +69,15 @@ def override_get_db():
 # ---------------------------------------------------------------------------
 @pytest.fixture(scope="session", autouse=True)
 def setup_db():
-    if engine.dialect.name == "sqlite":
-        # Null schema directly as well, in case listener fires after re-import
-        for table in Base.metadata.tables.values():
-            table.schema = None
-    else:
-        # For PostgreSQL, ensure schema exists and search_path is set
-        with engine.connect() as conn:
-            conn.execute(text("CREATE SCHEMA IF NOT EXISTS form_schema"))
-            conn.execute(text("SET search_path TO form_schema"))
-            conn.commit()
-
-    Base.metadata.create_all(bind=engine)
     app.dependency_overrides[get_db] = override_get_db
     yield
-    if engine.dialect.name == "sqlite":
-        Base.metadata.drop_all(bind=engine)
     engine.dispose()
     db_file = Path("test_form.db")
     if db_file.exists():
-        db_file.unlink(missing_ok=True)
+        try:
+            db_file.unlink(missing_ok=True)
+        except PermissionError:
+            pass
 
 
 # ---------------------------------------------------------------------------

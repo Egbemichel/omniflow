@@ -77,17 +77,15 @@ OTHER_INST_USER = {
 # ---------------------------------------------------------------------------
 @pytest.fixture(scope="session", autouse=True)
 def setup_db():
-    for table in Base.metadata.tables.values():
-        table.schema = None
-
-    Base.metadata.create_all(bind=engine)
     app.dependency_overrides[get_db] = override_get_db
     yield
-    Base.metadata.drop_all(bind=engine)
     engine.dispose()
     db_file = Path("test_workflow.db")
     if db_file.exists():
-        db_file.unlink(missing_ok=True)
+        try:
+            db_file.unlink(missing_ok=True)
+        except PermissionError:
+            pass
 
 
 # ---------------------------------------------------------------------------

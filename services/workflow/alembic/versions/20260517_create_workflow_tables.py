@@ -15,18 +15,15 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Explicitly set search_path for PostgreSQL to ensure tables are created in the correct schema.
-    op.execute("SET search_path TO workflow_schema")
-
+    # Set search_path so subsequent operations target workflow_schema
     bind = op.get_bind()
     is_sqlite = bind.dialect.name == "sqlite"
-    schema = None if is_sqlite else "workflow_schema"
-
     if not is_sqlite:
         op.execute("CREATE SCHEMA IF NOT EXISTS workflow_schema")
+        op.execute("SET search_path TO workflow_schema")
 
     id_default = None if is_sqlite else sa.text("gen_random_uuid()")
-    now_default = None if is_sqlite else sa.text("now()")
+    now_default = sa.text("(CURRENT_TIMESTAMP)") if is_sqlite else sa.text("now()")
 
     op.create_table(
         "workflows",
@@ -40,7 +37,6 @@ def upgrade() -> None:
         sa.Column("locked_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=now_default),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=now_default),
-        schema=schema,
     )
 
     op.create_table(
@@ -50,7 +46,7 @@ def upgrade() -> None:
             "workflow_id",
             sa.String(),
             sa.ForeignKey(
-                "workflow_schema.workflows.id" if not is_sqlite else "workflows.id",
+                "workflows.id",
                 ondelete="CASCADE",
             ),
             nullable=False,
@@ -63,7 +59,6 @@ def upgrade() -> None:
         ),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=now_default),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=now_default),
-        schema=schema,
     )
 
 
@@ -71,11 +66,9 @@ def downgrade() -> None:
     # Set search_path to the target schema for cleanup.
     op.execute("SET search_path TO workflow_schema")
 
-    bind = op.get_bind()
-    is_sqlite = bind.dialect.name == "sqlite"
-    schema = None if is_sqlite else "workflow_schema"
+    op.drop_table("workflow_steps")
+    op.drop_table("workflows")
 
-    op.drop_table("workflow_steps", schema=schema)
-    op.drop_table("workflows", schema=schema)
-    if not is_sqlite:
+    bind = op.get_bind()
+    if bind.dialect.name != "sqlite":
         op.execute("DROP SCHEMA IF EXISTS workflow_schema")
