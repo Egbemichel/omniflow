@@ -1,9 +1,28 @@
+import os
+import redis
+import json
 from datetime import datetime, timezone
 from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app import workflow_client
+
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+redis_client = redis.from_url(REDIS_URL)
+
+
+def _publish_notification(event_type: str, recipient_id: str, message: str):
+    """Publish an event to Redis for the Notification Service."""
+    try:
+        payload = {
+            "event_type": event_type,
+            "recipient_id": recipient_id,
+            "message": message,
+        }
+        redis_client.publish("notifications", json.dumps(payload))
+    except Exception as e:
+        print(f"Failed to publish notification: {e}")
 
 
 def create_submission(
@@ -31,6 +50,14 @@ def create_submission(
     db.add(task)
     db.commit()
     db.refresh(submission)
+
+    # Notify staff of new task
+    _publish_notification(
+        "task_assigned",
+        wf_state["assigned_role"],
+        f"New submission {submission.id} needs {wf_state['assigned_role']} review.",
+    )
+
     return submission
 
 
@@ -48,6 +75,18 @@ def get_inbox(db: Session, role: str) -> List[models.Task]:
         .filter(models.Task.assigned_role == role, models.Task.status == "pending")
         .all()
     )
+
+
+def get_user_submissions(db: Session, user_id: str) -> List[models.Submission]:
+    return (
+        db.query(models.Submission)
+        .filter(models.Submission.submitted_by == user_id)
+        .all()
+    )
+
+
+def get_all_submissions(db: Session) -> List[models.Submission]:
+    return db.query(models.Submission).all()
 
 
 def get_task(db: Session, task_id: str) -> Optional[models.Task]:
@@ -82,6 +121,12 @@ def complete_task(
 
     if wf_state["status"] == "completed":
         submission.status = "completed"
+        # Notify user their submission is done
+        _publish_notification(
+            "submission_completed",
+            submission.submitted_by,
+            f"Your submission {submission.id} has been fully processed.",
+        )
     else:
         # Create next task
         next_task = models.Task(
@@ -90,6 +135,12 @@ def complete_task(
             status="pending",
         )
         db.add(next_task)
+        # Notify the next role
+        _publish_notification(
+            "task_assigned",
+            wf_state["assigned_role"],
+            f"Task for submission {submission.id} assigned to your role.",
+        )
 
     db.commit()
     db.refresh(task)

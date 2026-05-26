@@ -1,19 +1,25 @@
 # services/task/tests/conftest.py
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from unittest.mock import patch
+import os
+
 from app.main import app
 from app.database import Base, get_db
+from app.models import SCHEMA
 
-TEST_DB_URL = "sqlite:///./test_task.db"
-engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
+# Force tests to use PostgreSQL if available, else SQLite
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test_task.db")
+engine = create_engine(DATABASE_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def override_get_db():
     db = TestingSessionLocal()
+    if not DATABASE_URL.startswith("sqlite") and SCHEMA:
+        db.execute(text(f"SET search_path TO {SCHEMA}"))
     try:
         yield db
     finally:
@@ -22,18 +28,33 @@ def override_get_db():
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_db():
+    if not DATABASE_URL.startswith("sqlite") and SCHEMA:
+        with engine.connect() as conn:
+            conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA}"))
+            conn.commit()
+
     Base.metadata.create_all(bind=engine)
     app.dependency_overrides[get_db] = override_get_db
     yield
-    Base.metadata.drop_all(bind=engine)
+    # No drop_all to keep schema for inspection if needed, or cleanup in clean_db
 
 
 @pytest.fixture(autouse=True)
 def clean_db():
     yield
     with engine.connect() as conn:
+        if not DATABASE_URL.startswith("sqlite") and SCHEMA:
+            conn.execute(text(f"SET search_path TO {SCHEMA}"))
+
         for table in reversed(Base.metadata.sorted_tables):
-            conn.execute(table.delete())
+            if DATABASE_URL.startswith("sqlite"):
+                conn.execute(table.delete())
+            else:
+                # PostgreSQL fast truncate
+                table_name = table.name
+                conn.execute(
+                    text(f'TRUNCATE TABLE "{table_name}" RESTART IDENTITY CASCADE')
+                )
         conn.commit()
 
 

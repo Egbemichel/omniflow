@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel — OmniFlow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <script src="js/tailwind-config.js"></script>
+</head>
+<body class="bg-apple-base flex h-screen overflow-hidden">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-apple-dark flex flex-col pt-12 pb-6 px-4">
+        <div class="px-2 mb-10">
+            <h2 class="t-nav text-white font-semibold">OMNIFLOW ADMIN</h2>
+        </div>
+        <nav class="flex-grow space-y-1">
+            <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
+                <span>Dashboard</span>
+            </a>
+            <a href="workflow.html" class="flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
+                <span>Workflows</span>
+            </a>
+            <a href="admin.html" class="flex items-center gap-3 px-3 py-2 text-white bg-slate-800 rounded-apple-sm t-nav">
+                <span>Admin Panel</span>
+            </a>
+        </nav>
+        <div class="mt-auto">
+            <button onclick="signOut()" class="w-full flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
+                <span>Sign Out</span>
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-grow overflow-y-auto p-12">
+        <header class="mb-12">
+            <h1 class="t-headline">Administration</h1>
+            <p class="t-body text-slate-500">Manage institution users and global settings.</p>
+        </header>
+
+        <div class="grid grid-cols-1 gap-8">
+            <section class="bg-white rounded-apple-lg border-hairline p-8">
+                <h2 class="t-title mb-6">User Management</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="border-b border-slate-100">
+                                <th class="pb-4 t-caption-strong text-slate-400">User</th>
+                                <th class="pb-4 t-caption-strong text-slate-400">Role</th>
+                                <th class="pb-4 t-caption-strong text-slate-400">Last Login</th>
+                                <th class="pb-4 t-caption-strong text-slate-400">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="user-table-body">
+                            <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script type="module" src="js/admin.js"></script>
+    <script>
+        function signOut() {
+            localStorage.removeItem('of_token');
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>

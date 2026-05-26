@@ -1,13 +1,47 @@
 # services/workflow/tests/conftest.py
+import os
+import sys
+import uuid
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from app.main import app
-from app.database import Base, get_db
 
-TEST_DB_URL = "sqlite:///./test_workflow.db"
-engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
+# ---------------------------------------------------------------------------
+# Path bootstrap
+# ---------------------------------------------------------------------------
+_TESTS_DIR = Path(__file__).resolve().parent
+_APP_ROOT = _TESTS_DIR.parent
+
+if str(_APP_ROOT) not in sys.path:
+    sys.path.insert(0, str(_APP_ROOT))
+
+# ---------------------------------------------------------------------------
+# Environment defaults
+# ---------------------------------------------------------------------------
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql://pk_user:pk_password@localhost:5432/pk_user"
+)
+os.environ.setdefault("JWT_SECRET", "test_secret")
+os.environ.setdefault("AUTH_SERVICE_URL", "http://localhost:8000")
+os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
+
+# ---------------------------------------------------------------------------
+# Local imports
+# ---------------------------------------------------------------------------
+from app.database import Base, get_db  # noqa: E402
+from app.main import app  # noqa: E402
+from app.models.workflow import Workflow, WorkflowStep  # noqa: F401, E402
+from app.routes.dependencies import get_current_user  # noqa: E402
+
+# ---------------------------------------------------------------------------
+# Test database
+# ---------------------------------------------------------------------------
+DATABASE_URL = os.environ["DATABASE_URL"]
+engine = create_engine(DATABASE_URL)
+
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -19,72 +53,176 @@ def override_get_db():
         db.close()
 
 
+# ---------------------------------------------------------------------------
+# User stubs
+# ---------------------------------------------------------------------------
+ADMIN_USER = {"id": 1, "email": "admin@test.com", "role": "admin", "institution_id": 1}
+STAFF_USER = {"id": 2, "email": "staff@test.com", "role": "staff", "institution_id": 1}
+OTHER_INST_USER = {
+    "id": 3,
+    "email": "other@test.com",
+    "role": "admin",
+    "institution_id": 2,
+}
+
+
+# ---------------------------------------------------------------------------
+# Session-scoped DB setup / teardown
+# ---------------------------------------------------------------------------
 @pytest.fixture(scope="session", autouse=True)
 def setup_db():
-    Base.metadata.create_all(bind=engine)
     app.dependency_overrides[get_db] = override_get_db
     yield
-    Base.metadata.drop_all(bind=engine)
+    engine.dispose()
+    db_file = Path("test_workflow.db")
+    if db_file.exists():
+        try:
+            db_file.unlink(missing_ok=True)
+        except PermissionError:
+            pass
 
 
+# ---------------------------------------------------------------------------
+# Per-test isolation
+# ---------------------------------------------------------------------------
 @pytest.fixture(autouse=True)
 def clean_db():
     yield
-    with engine.connect() as conn:
-        for table in reversed(Base.metadata.sorted_tables):
-            conn.execute(table.delete())
-        conn.commit()
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            # PostgreSQL: Use TRUNCATE for speed and to reset sequences
+            for table in reversed(Base.metadata.sorted_tables):
+                schema_prefix = f"{table.schema}." if table.schema else ""
+                conn.execute(
+                    text(
+                        f"TRUNCATE TABLE {schema_prefix}{table.name} RESTART IDENTITY CASCADE"
+                    )
+                )
+        else:
+            # SQLite: Use DELETE
+            for table in reversed(Base.metadata.sorted_tables):
+                conn.execute(table.delete())
+
+
+# ---------------------------------------------------------------------------
+# Core fixtures
+# ---------------------------------------------------------------------------
+@pytest.fixture
+def db_session():
+    db = TestingSessionLocal()
+    # Ensure search_path is set for the session if using PostgreSQL
+    if engine.dialect.name == "postgresql":
+        db.execute(text("SET search_path TO workflow_schema"))
+        db.commit()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 @pytest.fixture
 def client():
+    """Unauthenticated client."""
     with TestClient(app) as c:
         yield c
 
 
 @pytest.fixture
-def admin_headers():
-    """Mocked admin auth headers — workflow service trusts the gateway."""
-    return {"X-User-Id": "admin-001", "X-User-Role": "admin"}
+def admin_client():
+    """HTTP client authenticated as admin (institution_id=1)."""
+    app.dependency_overrides[get_current_user] = lambda: ADMIN_USER
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.fixture
-def nurse_headers():
-    return {"X-User-Id": "nurse-001", "X-User-Role": "nurse"}
+def staff_client():
+    """HTTP client authenticated as staff (institution_id=1)."""
+    app.dependency_overrides[get_current_user] = lambda: STAFF_USER
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.fixture
-def doctor_headers():
-    return {"X-User-Id": "doctor-001", "X-User-Role": "doctor"}
+def other_inst_client():
+    """HTTP client authenticated as admin of a different institution."""
+    app.dependency_overrides[get_current_user] = lambda: OTHER_INST_USER
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.pop(get_current_user, None)
 
 
+# ---------------------------------------------------------------------------
+# Workflow factory
+# ---------------------------------------------------------------------------
 @pytest.fixture
-def sample_workflow_payload():
-    return {
-        "name": "Patient Admission",
-        "description": "Standard hospital admission workflow",
-        "steps": [
-            {"order": 1, "name": "Nurse Triage", "assigned_role": "nurse"},
-            {"order": 2, "name": "Doctor Review", "assigned_role": "doctor"},
-            {"order": 3, "name": "Admin Sign-off", "assigned_role": "admin"},
-        ],
-    }
+def create_workflow():
+    """Factory: create a workflow row directly in the DB."""
+
+    def _create(
+        institution_id: int = 1,
+        admin_id: int = 1,
+        name: str = "Test Workflow",
+        status: str = "DRAFT",
+    ) -> Workflow:
+        db = TestingSessionLocal()
+        try:
+            wf = Workflow(
+                id=str(uuid.uuid4()),
+                name=name,
+                institution_id=institution_id,
+                admin_id=admin_id,
+                status=status,
+            )
+            db.add(wf)
+            db.commit()
+            db.refresh(wf)
+            return wf
+        finally:
+            db.close()
+
+    return _create
 
 
+# ---------------------------------------------------------------------------
+# Step factory (used by test_publish.py and test_steps.py as "add_step")
+# ---------------------------------------------------------------------------
 @pytest.fixture
-def draft_workflow(client, admin_headers, sample_workflow_payload):
-    """Creates a draft workflow and returns it."""
-    response = client.post(
-        "/workflows", json=sample_workflow_payload, headers=admin_headers
-    )
-    assert response.status_code == 201
-    return response.json()
+def add_step():
+    """Factory: create a workflow step row directly in the DB."""
+
+    def _create(
+        workflow_id: str,
+        step_name: str = "Review",
+        assigned_role: str = "staff",
+        step_order: int = 1,
+        is_terminal: bool = True,
+    ) -> WorkflowStep:
+        db = TestingSessionLocal()
+        try:
+            step = WorkflowStep(
+                id=str(uuid.uuid4()),
+                workflow_id=workflow_id,
+                step_name=step_name,
+                assigned_role=assigned_role,
+                step_order=step_order,
+                is_terminal=is_terminal,
+            )
+            db.add(step)
+            db.commit()
+            db.refresh(step)
+            return step
+        finally:
+            db.close()
+
+    return _create
 
 
+# ---------------------------------------------------------------------------
+# Alias so tests using "create_step" also work
+# ---------------------------------------------------------------------------
 @pytest.fixture
-def published_workflow(client, admin_headers, draft_workflow):
-    """Creates and publishes a workflow."""
-    wf_id = draft_workflow["id"]
-    client.post(f"/workflows/{wf_id}/publish", headers=admin_headers)
-    response = client.get(f"/workflows/{wf_id}", headers=admin_headers)
-    return response.json()
+def create_step(add_step):
+    return add_step

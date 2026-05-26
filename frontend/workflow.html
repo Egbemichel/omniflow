@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workflows — OmniFlow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <script src="js/tailwind-config.js"></script>
+</head>
+<body class="bg-apple-base flex h-screen overflow-hidden">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-apple-dark flex flex-col pt-12 pb-6 px-4">
+        <div class="px-2 mb-10">
+            <h2 class="t-nav text-white font-semibold">OMNIFLOW</h2>
+        </div>
+        <nav class="flex-grow space-y-1">
+            <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
+                <span>Dashboard</span>
+            </a>
+            <a href="workflow.html" class="flex items-center gap-3 px-3 py-2 text-white bg-slate-800 rounded-apple-sm t-nav">
+                <span>Workflows</span>
+            </a>
+            <a href="admin.html" class="flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
+                <span>Admin</span>
+            </a>
+        </nav>
+        <div class="mt-auto">
+            <button onclick="signOut()" class="w-full flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
+                <span>Sign Out</span>
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-grow overflow-y-auto p-12">
+        <header class="mb-12 flex justify-between items-center">
+            <div>
+                <h1 class="t-headline">Workflows</h1>
+                <p class="t-body text-slate-500">Define and manage institutional business processes.</p>
+            </div>
+            <button id="create-wf-btn" class="bg-apple-accent text-white px-6 py-2 rounded-apple-pill t-button shadow-sm">
+                Create Workflow
+            </button>
+        </header>
+
+        <div id="workflow-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <!-- Workflows will be loaded here -->
+            <div class="bg-white p-6 rounded-apple-lg border-hairline animate-pulse">
+                <div class="h-4 bg-slate-100 rounded w-3/4 mb-4"></div>
+                <div class="h-3 bg-slate-100 rounded w-1/2"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Builder Modal -->
+    <div id="builder-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white w-full max-w-2xl rounded-apple-xl shadow-2xl p-8 max-h-[90vh] overflow-y-auto">
+            <header class="flex justify-between items-center mb-8">
+                <h2 class="t-title">Workflow Builder</h2>
+                <button id="close-builder-btn" class="text-slate-400 hover:text-slate-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </header>
+
+            <form id="builder-form" class="space-y-6">
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="t-caption-strong text-slate-400 uppercase">Workflow Name</label>
+                        <input type="text" id="wf-name" required class="w-full bg-slate-50 border-hairline rounded-apple-sm px-4 py-2 focus:ring-2 focus:ring-apple-accent/20 outline-none transition-all" placeholder="e.g., Travel Request">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="t-caption-strong text-slate-400 uppercase">Description</label>
+                        <input type="text" id="wf-desc" class="w-full bg-slate-50 border-hairline rounded-apple-sm px-4 py-2 focus:ring-2 focus:ring-apple-accent/20 outline-none transition-all" placeholder="Brief purpose...">
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-100 pt-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="t-body font-semibold">Sequence Steps</h3>
+                        <button type="button" id="add-step-btn" class="text-apple-accent font-semibold text-sm hover:underline">+ Add Step</button>
+                    </div>
+
+                    <div id="steps-container" class="space-y-4">
+                        <!-- Dynamic Steps -->
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-4 pt-6">
+                    <button type="button" id="cancel-builder-btn" class="px-6 py-2 t-button text-slate-500 hover:bg-slate-50 rounded-apple-pill">Cancel</button>
+                    <button type="submit" class="px-6 py-2 t-button bg-apple-accent text-white rounded-apple-pill shadow-sm">Save Definition</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/workflow.js"></script>
+    <script>
+        function signOut() {
+            localStorage.removeItem('of_token');
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>
