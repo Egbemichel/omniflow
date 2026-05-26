@@ -22,7 +22,7 @@ if str(_APP_ROOT) not in sys.path:
 # Environment defaults
 # ---------------------------------------------------------------------------
 os.environ.setdefault(
-    "DATABASE_URL", "postgresql://pk_user:pk_password@localhost:5432/paper_killer"
+    "DATABASE_URL", "postgresql://pk_user:pk_password@localhost:5432/pk_user"
 )
 os.environ.setdefault("JWT_SECRET", "test_secret")
 os.environ.setdefault("AUTH_SERVICE_URL", "http://localhost:8000")

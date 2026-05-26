@@ -22,7 +22,7 @@ if str(_FORM_ROOT) not in sys.path:
 # Environment defaults (before app import so settings load cleanly)
 # ---------------------------------------------------------------------------
 os.environ.setdefault(
-    "DATABASE_URL", "postgresql://pk_user:pk_password@localhost:5432/paper_killer"
+    "DATABASE_URL", "postgresql://pk_user:pk_password@localhost:5432/pk_user"
 )
 os.environ.setdefault("AUTH_SERVICE_URL", "http://auth:8001")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")

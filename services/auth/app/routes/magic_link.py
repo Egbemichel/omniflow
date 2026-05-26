@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.repositories.user_repository import UserRepository
-from app.schemas.auth_schema import MagicLinkRequest, MagicLinkVerify, TokenResponse
+from app.schemas.auth_schema import MagicLinkRequest, TokenResponse
 from app.services.jwt_service import create_access_token
 from app.services.magic_link_service import MagicLinkService, get_magic_link_config
 from app.utils.oauth_config import get_oauth_settings
@@ -18,26 +18,30 @@ def get_magic_link_service() -> MagicLinkService:
     return MagicLinkService(config)
 
 
-@router.post("/auth/magic-link/request")
+@router.post("/auth/magic/login")
 def request_magic_link(
     payload: MagicLinkRequest,
     service: MagicLinkService = Depends(get_magic_link_service),
 ):
     try:
         token = service.generate_token(payload.email)
+        # In DEV, we can see the link in logs
+        print(
+            f"DEBUG: Magic Link for {payload.email}: http://localhost/login.html?token={token}"
+        )
     except Exception:
         raise HTTPException(status_code=500, detail="Login failed")
-    return {"message": "Magic link sent", "token": token}
+    return {"msg": "Magic link sent", "token": token}
 
 
-@router.post("/auth/magic-link/verify", response_model=TokenResponse)
+@router.get("/auth/magic/verify", response_model=TokenResponse)
 def verify_magic_link(
-    payload: MagicLinkVerify,
+    token: str,
     db: Session = Depends(get_db),
     service: MagicLinkService = Depends(get_magic_link_service),
 ):
     try:
-        email = service.verify_token(payload.token)
+        email = service.verify_token(token)
     except Exception:
         raise HTTPException(status_code=401, detail="Login failed")
 

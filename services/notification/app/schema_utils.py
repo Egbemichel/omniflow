@@ -1,26 +1,34 @@
 import os
-from sqlalchemy import event
+from sqlalchemy.orm import Session
+from sqlalchemy import text
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-def _schema_name():
-    # Return schema name from environment variable
-    return os.getenv("DATABASE_SCHEMA")
+def validate_schema_isolation(db_session: Session):
+    """Validate that tables exist in the correct schema."""
+    schema_name = os.getenv("DATABASE_SCHEMA", "notification_schema")
+    service_name = "notification"
 
+    try:
+        search_path = db_session.execute(text("SHOW search_path")).scalar()
+        logger.info(f"[{service_name}] Current search_path: {search_path}")
+    except Exception as e:
+        logger.warning(f"[{service_name}] Could not retrieve search_path: {e}")
 
-def setup_schema_listeners(engine):
-    """
-    Sets up event listeners to handle schema switching.
-    On SQLite, we strip the schema name since SQLite doesn't support schemas.
-    On PostgreSQL, we keep it.
-    """
-    if engine.dialect.name == "sqlite":
+    result = db_session.execute(
+        text("""
+        SELECT table_name FROM information_schema.tables
+        WHERE table_schema = :schema AND table_type = 'BASE TABLE'
+        """),
+        {"schema": schema_name},
+    )
+    tables = [row[0] for row in result]
+    if not tables:
+        logger.warning(f"[{service_name}] No tables found in schema '{schema_name}'.")
+        return
 
-        @event.listens_for(engine, "before_cursor_execute", retval=True)
-        def process_sql(conn, cursor, statement, parameters, context, execmany):
-            # In SQLite, remove 'schema.' prefix from table names
-            schema = _schema_name()
-            if schema and f'"{schema}".' in statement:
-                statement = statement.replace(f'"{schema}".', "")
-            elif schema and f"{schema}." in statement:
-                statement = statement.replace(f"{schema}.", "")
-            return statement, parameters
+    logger.info(
+        f"[{service_name}] ✓ Schema '{schema_name}' contains {len(tables)} tables: {tables}"
+    )

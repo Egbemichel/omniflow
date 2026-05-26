@@ -56,6 +56,12 @@ class TestSubmissions:
         )
         assert response.status_code == 403
 
+    def test_get_history_nonexistent_submission_returns_404(
+        self, client, nurse_headers
+    ):
+        response = client.get("/submissions/missing/history", headers=nurse_headers)
+        assert response.status_code == 404
+
 
 class TestTaskInbox:
     def test_staff_sees_tasks_assigned_to_their_role(

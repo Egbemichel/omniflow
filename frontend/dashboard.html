@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — OmniFlow</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body class="bg-apple-base flex h-screen overflow-hidden">
+  <!-- Sidebar -->
+  <aside class="w-64 bg-apple-dark flex flex-col pt-12 pb-6 px-4">
+    <div class="px-2 mb-10">
+      <h2 class="t-nav text-white font-semibold">OMNIFLOW</h2>
+    </div>
+
+    <nav class="flex-grow space-y-1">
+      <a href="#" class="flex items-center gap-3 px-3 py-2 text-white bg-slate-800 rounded-apple-sm t-nav">
+        <span>Dashboard</span>
+      </a>
+      <a href="#" class="flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
+        <span>In-box</span>
+      </a>
+      <a href="#" class="flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
+        <span>History</span>
+      </a>
+    </nav>
+
+    <div class="mt-auto space-y-1">
+      <a href="#" class="flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
+        <span>Settings</span>
+      </a>
+      <button onclick="signOut()" class="w-full flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
+        <span>Sign Out</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="flex-grow overflow-y-auto p-12">
+    <header class="mb-12 flex justify-between items-end">
+      <div>
+        <h1 class="t-headline">Welcome back, <span id="user-name">User</span></h1>
+        <p class="t-body text-slate-500">You have <span id="task-count">0</span> tasks requiring attention.</p>
+      </div>
+      <button class="bg-apple-accent text-white px-6 py-2 rounded-apple-pill t-button shadow-sm hover:bg-blue-700">
+        New Submission
+      </button>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- Task List Card -->
+      <section class="bg-white rounded-apple-lg border-hairline p-8">
+        <h2 class="t-title mb-6">Recent Tasks</h2>
+        <div id="task-list" class="space-y-4">
+          <p class="t-body text-slate-400 text-center py-12">No pending tasks found</p>
+        </div>
+      </section>
+
+      <!-- Submissions Card -->
+      <section class="bg-white rounded-apple-lg border-hairline p-8">
+        <h2 class="t-title mb-6">Your Submissions</h2>
+        <div id="submission-list" class="space-y-4">
+          <p class="t-body text-slate-400 text-center py-12">No submissions found</p>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="js/dashboard.js"></script>
+  <script>
+    function signOut() {
+        localStorage.removeItem('token');
+        window.location.href = 'login.html';
+    }
+  </script>
+</body>
+</html>

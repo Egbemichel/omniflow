@@ -14,7 +14,7 @@ def _require_auth(
 ):
     if not x_user_id or not x_user_role:
         raise HTTPException(status_code=401, detail="Authentication required")
-    return x_user_id, x_user_role
+    return {"user_id": x_user_id, "role": x_user_role}
 
 
 # ── Submissions ──────────────────────────────────────────────────────────────
@@ -24,12 +24,19 @@ def _require_auth(
 def create_submission(
     payload: schemas.SubmissionCreate,
     db: Session = Depends(get_db),
-    x_user_id: Optional[str] = Header(None),
-    x_user_role: Optional[str] = Header(None),
+    auth: dict = Depends(_require_auth),
 ):
-    if not x_user_id or not x_user_role:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    return services.create_submission(db, payload, x_user_id)
+    return services.create_submission(db, payload, auth["user_id"])
+
+
+@router.get("/submissions", response_model=List[schemas.SubmissionStatusOut])
+def get_submissions(
+    db: Session = Depends(get_db),
+    auth: dict = Depends(_require_auth),
+):
+    if auth["role"] in ["staff", "admin"]:
+        return services.get_all_submissions(db)
+    return services.get_user_submissions(db, auth["user_id"])
 
 
 @router.get(
@@ -38,16 +45,13 @@ def create_submission(
 def get_submission_status(
     submission_id: str,
     db: Session = Depends(get_db),
-    x_user_id: Optional[str] = Header(None),
-    x_user_role: Optional[str] = Header(None),
+    auth: dict = Depends(_require_auth),
 ):
-    if not x_user_id or not x_user_role:
-        raise HTTPException(status_code=401, detail="Authentication required")
     sub = services.get_submission(db, submission_id)
     if not sub:
         raise HTTPException(status_code=404, detail="Submission not found")
     # Only the submitter or staff/admin can view
-    if x_user_role == "end_user" and sub.submitted_by != x_user_id:
+    if auth["role"] == "end_user" and sub.submitted_by != auth["user_id"]:
         raise HTTPException(status_code=403, detail="Forbidden")
     return schemas.SubmissionStatusOut(id=sub.id, status=sub.status)
 
@@ -58,11 +62,8 @@ def get_submission_status(
 def get_submission_history(
     submission_id: str,
     db: Session = Depends(get_db),
-    x_user_id: Optional[str] = Header(None),
-    x_user_role: Optional[str] = Header(None),
+    auth: dict = Depends(_require_auth),
 ):
-    if not x_user_id or not x_user_role:
-        raise HTTPException(status_code=401, detail="Authentication required")
     sub = services.get_submission(db, submission_id)
     if not sub:
         raise HTTPException(status_code=404, detail="Submission not found")
@@ -75,24 +76,17 @@ def get_submission_history(
 @router.get("/tasks/inbox", response_model=List[schemas.TaskOut])
 def get_inbox(
     db: Session = Depends(get_db),
-    x_user_id: Optional[str] = Header(None),
-    x_user_role: Optional[str] = Header(None),
+    auth: dict = Depends(_require_auth),
 ):
-    if not x_user_id or not x_user_role:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    return services.get_inbox(db, x_user_role)
+    return services.get_inbox(db, auth["role"])
 
 
 @router.post("/tasks/{task_id}/complete", response_model=schemas.TaskOut)
 def complete_task(
     task_id: str,
     db: Session = Depends(get_db),
-    x_user_id: Optional[str] = Header(None),
-    x_user_role: Optional[str] = Header(None),
+    auth: dict = Depends(_require_auth),
 ):
-    if not x_user_id or not x_user_role:
-        raise HTTPException(status_code=401, detail="Authentication required")
-
     task = services.get_task(db, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -100,10 +94,10 @@ def complete_task(
     if task.status == "completed":
         raise HTTPException(status_code=409, detail="Task already completed")
 
-    if task.assigned_role != x_user_role:
+    if task.assigned_role != auth["role"]:
         raise HTTPException(
             status_code=403, detail="Your role cannot complete this task"
         )
 
     sub = services.get_submission(db, task.submission_id)
-    return services.complete_task(db, task, sub, x_user_id, x_user_role)
+    return services.complete_task(db, task, sub, auth["user_id"], auth["role"])
