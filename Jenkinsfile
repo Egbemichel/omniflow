@@ -103,7 +103,7 @@ pipeline {
                             sh -c "
                                 pip install -r requirements.txt --quiet --no-cache-dir &&
                                 pip install pytest pytest-asyncio pytest-cov pytest-mock httpx --quiet --no-cache-dir &&
-                                alembic upgrade head &&
+                                PYTHONPATH=. alembic upgrade head &&
                                 PYTHONPATH=. pytest tests/ -v \
                                     --cov=app \
                                     --cov-report=term-missing \

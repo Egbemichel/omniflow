@@ -6,16 +6,13 @@ def test_magic_link_request_and_verify_flow(
     client_with_magic_link_override, db_session
 ):
     request = client_with_magic_link_override.post(
-        "/auth/magic-link/request",
+        "/auth/magic/login",
         json={"email": "magic@pk.com"},
     )
     assert request.status_code == 200
     token = request.json()["token"]
 
-    verify = client_with_magic_link_override.post(
-        "/auth/magic-link/verify",
-        json={"token": token},
-    )
+    verify = client_with_magic_link_override.get(f"/auth/magic/verify?token={token}")
     assert verify.status_code == 200
     payload = decode_token(verify.json()["access_token"])
     assert payload["email"] == "magic@pk.com"
@@ -29,27 +26,18 @@ def test_magic_link_request_and_verify_flow(
 
 def test_magic_link_single_use_token(client_with_magic_link_override):
     request = client_with_magic_link_override.post(
-        "/auth/magic-link/request",
+        "/auth/magic/login",
         json={"email": "once@pk.com"},
     )
     token = request.json()["token"]
 
-    first = client_with_magic_link_override.post(
-        "/auth/magic-link/verify",
-        json={"token": token},
-    )
+    first = client_with_magic_link_override.get(f"/auth/magic/verify?token={token}")
     assert first.status_code == 200
 
-    second = client_with_magic_link_override.post(
-        "/auth/magic-link/verify",
-        json={"token": token},
-    )
+    second = client_with_magic_link_override.get(f"/auth/magic/verify?token={token}")
     assert second.status_code == 401
 
 
 def test_magic_link_invalid_token_returns_401(client_with_magic_link_override):
-    response = client_with_magic_link_override.post(
-        "/auth/magic-link/verify",
-        json={"token": "bad"},
-    )
+    response = client_with_magic_link_override.get("/auth/magic/verify?token=bad")
     assert response.status_code == 401
