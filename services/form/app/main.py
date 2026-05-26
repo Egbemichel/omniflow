@@ -2,9 +2,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from app import models  # noqa: F401  # registers models with Base.metadata
-from app.database import Base, engine
+from app.database import Base, engine, SessionLocal
 from app.routes.api import router
 from app.services.event_service import EventService
+from app.schema_utils import validate_schema_isolation
+
+# In production, Alembic handles this. In dev/testing, this ensures tables exist.
+# However, we must ensure it respects schema if using PostgreSQL.
+if engine.dialect.name == "postgresql":  # pragma: no cover
+    with engine.connect() as conn:
+        conn.execute(text("CREATE SCHEMA IF NOT EXISTS form_schema"))
+        conn.execute(text("SET search_path TO form_schema"))
+        conn.commit()
 
 Base.metadata.create_all(bind=engine)
 
@@ -23,12 +32,21 @@ app.include_router(router)
 
 @app.on_event("startup")
 def startup_checks():
-    with engine.connect() as conn:
-        conn.execute(text("SELECT 1"))
+    db = SessionLocal()
     try:
+        # Verify connectivity
+        db.execute(text("SELECT 1"))
+
+        # Verify schema isolation (PostgreSQL only)
+        if engine.dialect.name == "postgresql":  # pragma: no cover
+            validate_schema_isolation(db)
+
+        # Verify event service
         EventService().ping()
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Startup check failed: {e}")
+    finally:
+        db.close()
 
 
 @app.get("/health")

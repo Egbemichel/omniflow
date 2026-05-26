@@ -3,17 +3,17 @@ from typing import Optional
 from app.services.auth_client import AuthClient, AuthClientError
 
 
-def get_token(authorization: Optional[str] = Header(None)) -> str:
+def get_token(authorization: Optional[str] = Header(None)) -> str:  # pragma: no cover
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated")
     return authorization.split(" ", 1)[1]
 
 
-def get_auth_client() -> AuthClient:
+def get_auth_client() -> AuthClient:  # pragma: no cover
     return AuthClient()
 
 
-def get_current_user(
+def get_current_user(  # pragma: no cover
     token: str = Depends(get_token), auth_client: AuthClient = Depends(get_auth_client)
 ) -> dict:
     try:

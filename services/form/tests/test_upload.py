@@ -1,7 +1,13 @@
 from app.repositories.form_repository import FormRepository
+from sqlalchemy import text
 
 
 def test_upload_happy_path(admin_client, db_session, upload_dir, monkeypatch):
+    # Pre-test schema verification
+    if db_session.bind.dialect.name == "postgresql":  # pragma: no cover
+        result = db_session.execute(text("SELECT current_schema()")).scalar()
+        assert result == "form_schema", f"Expected form_schema, got {result}"
+
     def fake_extract(self, file_path):
         return [
             {

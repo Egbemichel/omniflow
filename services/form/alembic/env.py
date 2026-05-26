@@ -47,6 +47,7 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     schema = get_schema()
+    print(f"Running online migrations for schema: {schema}")
     configuration = config.get_section(config.config_ini_section, {})
     configuration["sqlalchemy.url"] = get_url()
     connectable = engine_from_config(

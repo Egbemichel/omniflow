@@ -15,12 +15,15 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Explicitly set search_path for PostgreSQL to ensure tables are created in the correct schema.
+    op.execute("SET search_path TO workflow_schema")
+
     bind = op.get_bind()
     is_sqlite = bind.dialect.name == "sqlite"
-    schema = None if is_sqlite else "workflow"
+    schema = None if is_sqlite else "workflow_schema"
 
     if not is_sqlite:
-        op.execute("CREATE SCHEMA IF NOT EXISTS workflow")
+        op.execute("CREATE SCHEMA IF NOT EXISTS workflow_schema")
 
     id_default = None if is_sqlite else sa.text("gen_random_uuid()")
     now_default = None if is_sqlite else sa.text("now()")
@@ -47,7 +50,7 @@ def upgrade() -> None:
             "workflow_id",
             sa.String(),
             sa.ForeignKey(
-                "workflow.workflows.id" if not is_sqlite else "workflows.id",
+                "workflow_schema.workflows.id" if not is_sqlite else "workflows.id",
                 ondelete="CASCADE",
             ),
             nullable=False,
@@ -65,11 +68,14 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Set search_path to the target schema for cleanup.
+    op.execute("SET search_path TO workflow_schema")
+
     bind = op.get_bind()
     is_sqlite = bind.dialect.name == "sqlite"
-    schema = None if is_sqlite else "workflow"
+    schema = None if is_sqlite else "workflow_schema"
 
     op.drop_table("workflow_steps", schema=schema)
     op.drop_table("workflows", schema=schema)
     if not is_sqlite:
-        op.execute("DROP SCHEMA IF EXISTS workflow")
+        op.execute("DROP SCHEMA IF EXISTS workflow_schema")

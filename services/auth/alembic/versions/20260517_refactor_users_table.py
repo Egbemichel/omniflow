@@ -14,6 +14,8 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Set search_path to ensure isolation in CI
+    op.execute("SET search_path TO auth_schema")
     op.create_table(
         "users",
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
@@ -37,6 +39,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.execute("SET search_path TO auth_schema")
     op.drop_index("ix_users_institution_id", table_name="users")
     op.drop_index("ix_users_email", table_name="users")
     op.drop_table("users")

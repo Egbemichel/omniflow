@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 
 # ---------------------------------------------------------------------------
@@ -46,7 +46,8 @@ engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
 
 def _strip_schema(target, connection, **kw):
     """Null out schema before SQLite DDL so it doesn't generate 'form.forms'."""
-    target.schema = None
+    if connection.engine.dialect.name == "sqlite":
+        target.schema = None
 
 
 for _table in Base.metadata.tables.values():
@@ -68,14 +69,22 @@ def override_get_db():
 # ---------------------------------------------------------------------------
 @pytest.fixture(scope="session", autouse=True)
 def setup_db():
-    # Null schema directly as well, in case listener fires after re-import
-    for table in Base.metadata.tables.values():
-        table.schema = None
+    if engine.dialect.name == "sqlite":
+        # Null schema directly as well, in case listener fires after re-import
+        for table in Base.metadata.tables.values():
+            table.schema = None
+    else:
+        # For PostgreSQL, ensure schema exists and search_path is set
+        with engine.connect() as conn:
+            conn.execute(text("CREATE SCHEMA IF NOT EXISTS form_schema"))
+            conn.execute(text("SET search_path TO form_schema"))
+            conn.commit()
 
     Base.metadata.create_all(bind=engine)
     app.dependency_overrides[get_db] = override_get_db
     yield
-    Base.metadata.drop_all(bind=engine)
+    if engine.dialect.name == "sqlite":
+        Base.metadata.drop_all(bind=engine)
     engine.dispose()
     db_file = Path("test_form.db")
     if db_file.exists():
@@ -106,6 +115,10 @@ def client():
 @pytest.fixture
 def db_session():
     db = TestingSessionLocal()
+    # Ensure search_path is set for the session if using PostgreSQL
+    if engine.dialect.name == "postgresql":
+        db.execute(text("SET search_path TO form_schema"))
+        db.commit()
     try:
         yield db
     finally:

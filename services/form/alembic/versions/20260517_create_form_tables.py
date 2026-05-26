@@ -15,12 +15,16 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Explicitly set search_path for PostgreSQL to ensure tables are created in the correct schema.
+    # This prevents CI collisions and isolates microservice data.
+    op.execute("SET search_path TO form_schema")
+
     bind = op.get_bind()
     is_sqlite = bind.dialect.name == "sqlite"
-    schema = None if is_sqlite else "form"
+    schema = None if is_sqlite else "form_schema"
 
     if not is_sqlite:
-        op.execute("CREATE SCHEMA IF NOT EXISTS form")
+        op.execute("CREATE SCHEMA IF NOT EXISTS form_schema")
 
     id_default = None if is_sqlite else sa.text("gen_random_uuid()")
     now_default = None if is_sqlite else sa.text("now()")
@@ -46,7 +50,8 @@ def upgrade() -> None:
             "form_id",
             sa.String(),
             sa.ForeignKey(
-                "form.forms.id" if not is_sqlite else "forms.id", ondelete="CASCADE"
+                "form_schema.forms.id" if not is_sqlite else "forms.id",
+                ondelete="CASCADE",
             ),
             nullable=False,
         ),
@@ -62,11 +67,14 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Set search_path to the target schema for cleanup.
+    op.execute("SET search_path TO form_schema")
+
     bind = op.get_bind()
     is_sqlite = bind.dialect.name == "sqlite"
-    schema = None if is_sqlite else "form"
+    schema = None if is_sqlite else "form_schema"
 
     op.drop_table("form_fields", schema=schema)
     op.drop_table("forms", schema=schema)
     if not is_sqlite:
-        op.execute("DROP SCHEMA IF EXISTS form")
+        op.execute("DROP SCHEMA IF EXISTS form_schema")

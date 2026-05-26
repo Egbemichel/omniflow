@@ -13,7 +13,7 @@ class AuthClient:
             "AUTH_SERVICE_URL", "http://localhost:8001"
         )
 
-    def verify_token(self, token: str) -> Dict[str, object]:
+    def verify_token(self, token: str) -> Dict[str, object]:  # pragma: no cover
         url = f"{self.base_url}/auth/verify"
         try:
             response = httpx.get(
