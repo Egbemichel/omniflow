@@ -24,31 +24,33 @@ def run_worker():
                     data = json.loads(message["data"])
                     print(f"[Notification Worker] Received event: {data}")
 
-                    db: Session = SessionLocal()
-                    try:
-                        # If PostgreSQL, we need to set search_path
-                        if not DATABASE_URL.startswith("sqlite"):
-                            from sqlalchemy import text
-
-                            schema = os.getenv("DATABASE_SCHEMA", "notification_schema")
-                            db.execute(text(f"SET search_path TO {schema}"))
-
-                        services.create_notification(
-                            db,
-                            recipient_id=data["recipient_id"],
-                            event_type=data["event_type"],
-                            message=data["message"],
-                        )
-                        print(
-                            f"[Notification Worker] Saved notification for {data['recipient_id']}"
-                        )
-                    except Exception as e:
-                        print(f"[Notification Worker] Error saving notification: {e}")
-                    finally:
-                        db.close()
+                    handle_message(data)
         except Exception as e:
             print(f"[Notification Worker] Connection error: {e}. Retrying in 5s...")
             time.sleep(5)
+
+
+def handle_message(data: dict):
+    db: Session = SessionLocal()
+    try:
+        # If PostgreSQL, we need to set search_path
+        if not DATABASE_URL.startswith("sqlite"):
+            from sqlalchemy import text
+
+            schema = os.getenv("DATABASE_SCHEMA", "notification_schema")
+            db.execute(text(f"SET search_path TO {schema}"))
+
+        services.create_notification(
+            db,
+            recipient_id=data["recipient_id"],
+            event_type=data["event_type"],
+            message=data["message"],
+        )
+        print(f"[Notification Worker] Saved notification for {data['recipient_id']}")
+    except Exception as e:
+        print(f"[Notification Worker] Error saving notification: {e}")
+    finally:
+        db.close()
 
 
 def start_worker():
