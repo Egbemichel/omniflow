@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event, text
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 # ---------------------------------------------------------------------------
@@ -21,9 +21,9 @@ if str(_FORM_ROOT) not in sys.path:
 # ---------------------------------------------------------------------------
 # Environment defaults (before app import so settings load cleanly)
 # ---------------------------------------------------------------------------
-TEST_DB_URL = "sqlite:///./test_form.db"
-
-os.environ.setdefault("DATABASE_URL", TEST_DB_URL)
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql://pk_user:pk_password@localhost:5432/paper_killer"
+)
 os.environ.setdefault("AUTH_SERVICE_URL", "http://auth:8001")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 os.environ.setdefault("MAX_FILE_SIZE_MB", "20")
@@ -38,20 +38,10 @@ from app.repositories.form_repository import FormRepository  # noqa: E402
 from app.routes.dependencies import get_current_user  # noqa: E402
 
 # ---------------------------------------------------------------------------
-# SQLite test DB — strip schema prefixes so SQLite doesn't choke on
-# "CREATE TABLE form.forms" (SQLite has no schema support).
+# Test database
 # ---------------------------------------------------------------------------
-engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
-
-
-def _strip_schema(target, connection, **kw):
-    """Null out schema before SQLite DDL so it doesn't generate 'form.forms'."""
-    if connection.engine.dialect.name == "sqlite":
-        target.schema = None
-
-
-for _table in Base.metadata.tables.values():
-    event.listen(_table, "before_create", _strip_schema)
+DATABASE_URL = os.environ["DATABASE_URL"]
+engine = create_engine(DATABASE_URL)
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -86,10 +76,20 @@ def setup_db():
 @pytest.fixture(autouse=True)
 def clean_db():
     yield
-    with engine.connect() as conn:
-        for table in reversed(Base.metadata.sorted_tables):
-            conn.execute(table.delete())
-        conn.commit()
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            # PostgreSQL: Use TRUNCATE for speed and to reset sequences
+            for table in reversed(Base.metadata.sorted_tables):
+                schema_prefix = f"{table.schema}." if table.schema else ""
+                conn.execute(
+                    text(
+                        f"TRUNCATE TABLE {schema_prefix}{table.name} RESTART IDENTITY CASCADE"
+                    )
+                )
+        else:
+            # SQLite: Use DELETE
+            for table in reversed(Base.metadata.sorted_tables):
+                conn.execute(table.delete())
 
 
 # ---------------------------------------------------------------------------

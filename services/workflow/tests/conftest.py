@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 # ---------------------------------------------------------------------------
@@ -21,6 +21,9 @@ if str(_APP_ROOT) not in sys.path:
 # ---------------------------------------------------------------------------
 # Environment defaults
 # ---------------------------------------------------------------------------
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql://pk_user:pk_password@localhost:5432/paper_killer"
+)
 os.environ.setdefault("JWT_SECRET", "test_secret")
 os.environ.setdefault("AUTH_SERVICE_URL", "http://localhost:8000")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
@@ -34,19 +37,10 @@ from app.models.workflow import Workflow, WorkflowStep  # noqa: F401, E402
 from app.routes.dependencies import get_current_user  # noqa: E402
 
 # ---------------------------------------------------------------------------
-# SQLite test DB — strip schema prefixes (SQLite has no schema support)
+# Test database
 # ---------------------------------------------------------------------------
-TEST_DB_URL = "sqlite:///./test_workflow.db"
-
-engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
-
-
-def _strip_schema(target, connection, **kw):
-    target.schema = None
-
-
-for _table in Base.metadata.tables.values():
-    event.listen(_table, "before_create", _strip_schema)
+DATABASE_URL = os.environ["DATABASE_URL"]
+engine = create_engine(DATABASE_URL)
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -94,10 +88,20 @@ def setup_db():
 @pytest.fixture(autouse=True)
 def clean_db():
     yield
-    with engine.connect() as conn:
-        for table in reversed(Base.metadata.sorted_tables):
-            conn.execute(table.delete())
-        conn.commit()
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            # PostgreSQL: Use TRUNCATE for speed and to reset sequences
+            for table in reversed(Base.metadata.sorted_tables):
+                schema_prefix = f"{table.schema}." if table.schema else ""
+                conn.execute(
+                    text(
+                        f"TRUNCATE TABLE {schema_prefix}{table.name} RESTART IDENTITY CASCADE"
+                    )
+                )
+        else:
+            # SQLite: Use DELETE
+            for table in reversed(Base.metadata.sorted_tables):
+                conn.execute(table.delete())
 
 
 # ---------------------------------------------------------------------------
@@ -106,6 +110,10 @@ def clean_db():
 @pytest.fixture
 def db_session():
     db = TestingSessionLocal()
+    # Ensure search_path is set for the session if using PostgreSQL
+    if engine.dialect.name == "postgresql":
+        db.execute(text("SET search_path TO workflow_schema"))
+        db.commit()
     try:
         yield db
     finally:

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 # ---------------------------------------------------------------------------
@@ -24,7 +24,9 @@ if _s not in sys.path:
 # ---------------------------------------------------------------------------
 # Environment defaults — set before importing app so settings load cleanly.
 # ---------------------------------------------------------------------------
-os.environ["DATABASE_URL"] = "sqlite:///./test_auth.db"
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql://pk_user:pk_password@localhost:5432/paper_killer"
+)
 os.environ.setdefault("JWT_SECRET", "test_secret")
 os.environ.setdefault("MAGIC_LINK_SECRET", "magic_secret")
 os.environ.setdefault("MAGIC_LINK_TTL_SECONDS", "900")
@@ -44,11 +46,10 @@ from app.routes.magic_link import get_magic_link_service  # noqa: E402
 from app.services.magic_link_service import MagicLinkConfig, MagicLinkService  # noqa: E402
 
 # ---------------------------------------------------------------------------
-# Test database — SQLite file, wiped per-test.
+# Test database
 # ---------------------------------------------------------------------------
-TEST_DB_URL = "sqlite:///./test_auth.db"
-
-engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
+DATABASE_URL = os.environ["DATABASE_URL"]
+engine = create_engine(DATABASE_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -89,10 +90,20 @@ def setup_db():
 def clean_db():
     """Wipe all rows between each test — guarantees full isolation."""
     yield
-    with engine.connect() as conn:
-        for table in reversed(Base.metadata.sorted_tables):
-            conn.execute(table.delete())
-        conn.commit()
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            # PostgreSQL: Use TRUNCATE for speed and to reset sequences
+            for table in reversed(Base.metadata.sorted_tables):
+                schema_prefix = f"{table.schema}." if table.schema else ""
+                conn.execute(
+                    text(
+                        f"TRUNCATE TABLE {schema_prefix}{table.name} RESTART IDENTITY CASCADE"
+                    )
+                )
+        else:
+            # SQLite: Use DELETE
+            for table in reversed(Base.metadata.sorted_tables):
+                conn.execute(table.delete())
 
 
 # ---------------------------------------------------------------------------
@@ -109,6 +120,10 @@ def client():
 def db_session():
     """Bare DB session for direct model manipulation in tests."""
     db = TestingSessionLocal()
+    # Ensure search_path is set for the session if using PostgreSQL
+    if engine.dialect.name == "postgresql":
+        db.execute(text("SET search_path TO auth_schema"))
+        db.commit()
     try:
         yield db
     finally:
