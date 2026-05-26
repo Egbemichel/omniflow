@@ -9,7 +9,7 @@ from app.database import Base, DATABASE_URL
 def _schema_name() -> str | None:
     if DATABASE_URL.startswith("sqlite"):
         return None
-    return os.getenv("WORKFLOW_SCHEMA", "workflow")
+    return os.getenv("DATABASE_SCHEMA", "workflow_schema")
 
 
 SCHEMA = _schema_name()

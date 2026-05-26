@@ -46,7 +46,13 @@ def test_delete_step_draft(admin_client, create_workflow, add_step):
     assert response.status_code == 200
 
 
-def test_edit_step_after_publish_conflict(admin_client, create_workflow, add_step):
+def test_edit_step_after_publish_conflict(
+    admin_client, create_workflow, add_step, monkeypatch
+):
+    monkeypatch.setattr(
+        "app.services.event_service.EventService.publish_workflow_published",
+        lambda *args, **kwargs: None,
+    )
     workflow = create_workflow()
     step = add_step(workflow.id, "Review", "staff", 1, True)
     admin_client.post(f"/workflows/{workflow.id}/publish")

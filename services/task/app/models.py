@@ -2,10 +2,12 @@ import uuid
 from sqlalchemy import Column, String, DateTime, JSON
 from sqlalchemy.sql import func
 from app.database import Base
+from app.schema_utils import _schema_name
 
 
 class Submission(Base):
     __tablename__ = "submissions"
+    __table_args__ = {"schema": _schema_name()}
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     workflow_id = Column(String, nullable=False)
@@ -19,6 +21,7 @@ class Submission(Base):
 
 class Task(Base):
     __tablename__ = "tasks"
+    __table_args__ = {"schema": _schema_name()}
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     submission_id = Column(String, nullable=False, index=True)
@@ -31,6 +34,7 @@ class Task(Base):
 
 class AuditEvent(Base):
     __tablename__ = "audit_events"
+    __table_args__ = {"schema": _schema_name()}
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     submission_id = Column(String, nullable=False, index=True)

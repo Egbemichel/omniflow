@@ -2,20 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from app import models  # noqa: F401  # registers models with Base.metadata
-from app.database import Base, engine, SessionLocal
+from app.database import engine, SessionLocal
 from app.routes.api import router
 from app.services.event_service import EventService
 from app.schema_utils import validate_schema_isolation
-
-# In production, Alembic handles this. In dev/testing, this ensures tables exist.
-# However, we must ensure it respects schema if using PostgreSQL.
-if engine.dialect.name == "postgresql":  # pragma: no cover
-    with engine.connect() as conn:
-        conn.execute(text("CREATE SCHEMA IF NOT EXISTS form_schema"))
-        conn.execute(text("SET search_path TO form_schema"))
-        conn.commit()
-
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="OmniFlow Form Service", version="1.0.0")
 

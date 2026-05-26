@@ -1,12 +1,29 @@
+import os
 import uuid
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, UniqueConstraint
 from sqlalchemy.sql import func
-from app.database import Base
+from app.database import Base, DATABASE_URL
+
+
+def _schema_name() -> str | None:
+    if DATABASE_URL.startswith("sqlite"):
+        return None
+    return os.getenv("DATABASE_SCHEMA", "auth_schema")
+
+
+SCHEMA = _schema_name()
+
+
+def _table_args() -> tuple:
+    args = (UniqueConstraint("oauth_provider", "oauth_id", name="uq_oauth"),)
+    if SCHEMA:
+        return args + ({"schema": SCHEMA},)
+    return args
 
 
 class User(Base):
     __tablename__ = "users"
-    __table_args__ = (UniqueConstraint("oauth_provider", "oauth_id", name="uq_oauth"),)
+    __table_args__ = _table_args()
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     email = Column(String, unique=True, nullable=False, index=True)

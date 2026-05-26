@@ -8,7 +8,7 @@ from app.database import Base, DATABASE_URL
 def _schema_name() -> str | None:
     if DATABASE_URL.startswith("sqlite"):
         return None
-    return os.getenv("FORM_SCHEMA", "form")
+    return os.getenv("DATABASE_SCHEMA", "form_schema")
 
 
 SCHEMA = _schema_name()

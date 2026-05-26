@@ -15,16 +15,15 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Explicitly set search_path for PostgreSQL to ensure tables are created in the correct schema.
-    # This prevents CI collisions and isolates microservice data.
-    op.execute("SET search_path TO form_schema")
-
     bind = op.get_bind()
     is_sqlite = bind.dialect.name == "sqlite"
     schema = None if is_sqlite else "form_schema"
 
     if not is_sqlite:
+        # Create schema first
         op.execute("CREATE SCHEMA IF NOT EXISTS form_schema")
+        # Set search path for subsequent operations
+        op.execute("SET search_path TO form_schema")
 
     id_default = None if is_sqlite else sa.text("gen_random_uuid()")
     now_default = None if is_sqlite else sa.text("now()")

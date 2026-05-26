@@ -6,6 +6,8 @@ from sqlalchemy.orm import sessionmaker
 from unittest.mock import patch
 from app.main import app
 from app.database import Base, get_db
+import os
+from sqlalchemy import text
 
 TEST_DB_URL = "sqlite:///./test_task.db"
 engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
@@ -22,6 +24,16 @@ def override_get_db():
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_db():
+    if engine.dialect.name == "sqlite":
+        for table in Base.metadata.tables.values():
+            table.schema = None
+    else:
+        schema = os.getenv("DATABASE_SCHEMA", "task_schema")
+        with engine.connect() as conn:
+            conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+            conn.execute(text(f"SET search_path TO {schema}"))
+            conn.commit()
+
     Base.metadata.create_all(bind=engine)
     app.dependency_overrides[get_db] = override_get_db
     yield
