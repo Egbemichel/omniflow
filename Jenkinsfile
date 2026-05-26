@@ -43,7 +43,15 @@ pipeline {
                     echo "--- pip-audit CVE check ---"
                     for svc in auth form workflow; do
                         echo "Auditing $svc..."
-                        pip-audit -r services/$svc/requirements.txt --progress-spinner off --ignore-vuln CVE-2026-30922 --ignore-vuln CVE-2025-54121 --ignore-vuln CVE-2025-62727 --ignore-vuln CVE-2026-25990 --ignore-vuln CVE-2026-40192 --ignore-vuln CVE-2026-42308 --ignore-vuln CVE-2026-42310 --ignore-vuln CVE-2026-42311
+                        pip-audit -r services/$svc/requirements.txt --progress-spinner off \
+                            --ignore-vuln CVE-2026-30922 \
+                            --ignore-vuln CVE-2025-54121 \
+                            --ignore-vuln CVE-2025-62727 \
+                            --ignore-vuln CVE-2026-25990 \
+                            --ignore-vuln CVE-2026-40192 \
+                            --ignore-vuln CVE-2026-42308 \
+                            --ignore-vuln CVE-2026-42310 \
+                            --ignore-vuln CVE-2026-42311
                     done
                 '''
             }
@@ -53,10 +61,8 @@ pipeline {
         stage('Tests') {
             steps {
                 sh '''
-                    # Create isolated network for this build
                     docker network create pk-ci-network || true
 
-                    # Start PostgreSQL
                     docker run -d \
                         --name pk-postgres-test \
                         --network pk-ci-network \
@@ -65,26 +71,25 @@ pipeline {
                         -e POSTGRES_DB=paper_killer_test \
                         postgres:16-alpine
 
-                    # Start Redis
                     docker run -d \
                         --name pk-redis-test \
                         --network pk-ci-network \
                         redis:7-alpine
 
-                    # Wait for postgres to be ready
                     echo "Waiting for postgres..."
                     for i in $(seq 1 15); do
-                        docker exec pk-postgres-test pg_isready -U pk_user && break
+                        docker exec pk-postgres-test pg_isready -U pk_user && break || true
                         sleep 2
                     done
 
                     FAILED=0
                     for svc in auth form workflow; do
                         echo "====== Testing $svc ======"
+
                         docker run --rm \
                             --network pk-ci-network \
-                            -v ${WORKSPACE}/services/$svc:/app \
-                            -w /app \
+                            --volumes-from $HOSTNAME \
+                            -w $WORKSPACE/services/$svc \
                             -e DATABASE_URL=postgresql://pk_user:pk_password@pk-postgres-test:5432/paper_killer_test \
                             -e DATABASE_SCHEMA=${svc}_schema \
                             -e REDIS_URL=redis://pk-redis-test:6379/0 \
@@ -101,28 +106,25 @@ pipeline {
                                 PYTHONPATH=. pytest tests/ -v \
                                     --cov=app \
                                     --cov-report=term-missing \
-                                    --cov-report=xml:/app/coverage.xml \
+                                    --cov-report=xml:coverage.xml \
                                     --cov-fail-under=85
                             " || FAILED=1
 
                         echo "====== $svc done ======"
                     done
 
-                    # Cleanup
                     docker rm -f pk-postgres-test pk-redis-test || true
                     docker network rm pk-ci-network || true
 
                     if [ $FAILED -ne 0 ]; then
-                        echo "One or more services failed tests or coverage gate"
+                        echo "One or more services failed tests or did not meet 85% coverage"
                         exit 1
                     fi
                 '''
             }
             post {
                 always {
-                    // junit requires node context — this stage runs on agent any, so it is fine
                     junit allowEmptyResults: true, testResults: 'services/*/coverage.xml'
-                    // Cleanup in case of mid-loop failure
                     sh '''
                         docker rm -f pk-postgres-test pk-redis-test 2>/dev/null || true
                         docker network rm pk-ci-network 2>/dev/null || true
@@ -135,13 +137,13 @@ pipeline {
         stage('Docker Build') {
             steps {
                 sh '''
-                    echo "Building all service images..."
+                    echo "Building all service images (tag: ${IMAGE_TAG})..."
                     docker build -t pk-auth:${IMAGE_TAG}     ./services/auth
                     docker build -t pk-form:${IMAGE_TAG}     ./services/form
                     docker build -t pk-workflow:${IMAGE_TAG} ./services/workflow
 
                     echo "All images built successfully"
-                    docker images | grep pk-
+                    docker images | grep "^pk-"
                 '''
             }
         }
@@ -158,14 +160,13 @@ pipeline {
                         docker tag pk-${svc}:${IMAGE_TAG} ${IMAGE_PREFIX}-${svc}:latest
                         docker push ${IMAGE_PREFIX}-${svc}:${IMAGE_TAG}
                         docker push ${IMAGE_PREFIX}-${svc}:latest
-                        echo "Pushed ${svc} → ${IMAGE_TAG}"
+                        echo "Pushed: ${svc} → ${IMAGE_TAG}"
                     done
                 '''
             }
         }
 
         // ─── STAGE 5: DEPLOY TO KUBERNETES (commented out — no VPS yet) ─────
-        // Uncomment when kubeconfig credential is added to Jenkins and VPS is ready.
         //
         // stage('Deploy to Kubernetes') {
         //     when { branch 'main' }
@@ -214,28 +215,13 @@ pipeline {
 
     post {
         failure {
-            // kubectl rollback commented out — no VPS yet
-            // Uncomment and add KUBECONFIG env when deploy stage is re-enabled.
-            //
-            // script {
-            //     if (env.BRANCH_NAME == 'main') {
-            //         sh '''
-            //             for svc in auth form workflow; do
-            //                 kubectl rollout undo deployment/pk-${svc} || true
-            //             done
-            //         '''
-            //     }
-            // }
             echo "Pipeline failed on branch: ${env.BRANCH_NAME}"
         }
         always {
-            // node context is guaranteed here because agent any is set at pipeline level
-            sh '''
-                docker rmi $(docker images "pk-*" -q) --force 2>/dev/null || true
-            '''
+            sh 'docker rmi $(docker images "pk-*" -q) --force 2>/dev/null || true'
         }
         success {
-            echo "Pipeline completed for branch: ${env.BRANCH_NAME}"
+            echo "Pipeline passed — branch: ${env.BRANCH_NAME} — tag: ${env.IMAGE_TAG}"
         }
     }
 }
