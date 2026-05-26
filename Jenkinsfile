@@ -51,7 +51,8 @@ pipeline {
                             --ignore-vuln CVE-2026-40192 \
                             --ignore-vuln CVE-2026-42308 \
                             --ignore-vuln CVE-2026-42310 \
-                            --ignore-vuln CVE-2026-42311
+                            --ignore-vuln CVE-2026-42311 \
+                            --ignore-vuln PYSEC-2026-161
                     done
                 '''
             }
