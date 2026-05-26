@@ -1,11 +1,11 @@
-import { getHeaders } from './auth.js';
+import { auth } from './auth.js';
 
 const API_ROOT = '/api';
 
 export const api = {
   async get(path) {
     const res = await fetch(`${API_ROOT}${path}`, {
-      headers: getHeaders()
+      headers: auth.getHeaders()
     });
     if (res.status === 401) {
       window.location.href = '/login.html';
@@ -18,7 +18,7 @@ export const api = {
     const res = await fetch(`${API_ROOT}${path}`, {
       method: 'POST',
       headers: {
-        ...getHeaders(),
+        ...auth.getHeaders(),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(body)
@@ -45,6 +45,17 @@ export const api = {
     list: () => api.get('/task/submissions'),
     status: (id) => api.get(`/task/submissions/${id}/status`),
     history: (id) => api.get(`/task/submissions/${id}/history`)
+  },
+
+  workflows: {
+    list: () => api.get('/workflow/workflows'),
+    get: (id) => api.get(`/workflow/workflows/${id}`),
+    create: (data) => api.post('/workflow/workflows', data)
+  },
+
+  admin: {
+    listUsers: () => api.get('/auth/admin/users'),
+    updateUser: (id, data) => api.post(`/auth/admin/users/${id}`, data)
   },
 
   notifications: {

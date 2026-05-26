@@ -43,6 +43,7 @@ class WorkflowCreate(BaseModel):
     name: str = Field(min_length=1)
     description: Optional[str] = None
     form_id: Optional[str] = None
+    steps: Optional[List[StepCreate]] = None
 
 
 class WorkflowUpdate(BaseModel):
@@ -66,7 +67,9 @@ class WorkflowDetailResponse(BaseModel):
 class WorkflowListItem(BaseModel):
     workflow_id: str
     name: str
+    description: Optional[str] = None
     status: WorkflowStatus
+    step_count: int
     created_at: datetime
     updated_at: Optional[datetime]
 

@@ -98,19 +98,24 @@ services:
       redis:
         condition: service_healthy
 
+  frontend:
+    build: ./frontend
+    expose:
+      - "80"
+
   gateway:
     image: nginx:alpine
     ports:
       - "80:80"
     volumes:
       - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./frontend:/usr/share/nginx/html:ro
     depends_on:
       - auth
       - form
       - workflow
       - task
       - notification
+      - frontend
 
 volumes:
   postgres_data:

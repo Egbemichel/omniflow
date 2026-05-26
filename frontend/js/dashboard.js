@@ -1,4 +1,5 @@
 import { api } from './api.js';
+import { auth } from './auth.js';
 
 async function initDashboard() {
   try {
@@ -80,15 +81,13 @@ window.completeTask = async (id) => {
 };
 
 document.querySelector('button:contains("Sign Out")')?.addEventListener('click', () => {
-    localStorage.removeItem('token');
-    window.location.href = '/login.html';
+    auth.logout();
 });
 
 // Polyfill for :contains
 if (!Element.prototype.containsText) {
     window.signOut = () => {
-        localStorage.removeItem('token');
-        window.location.href = 'login.html';
+        auth.logout();
     }
 }
 

@@ -36,6 +36,19 @@ def create_workflow(
 ):
     repo = WorkflowRepository(db)
     workflow_id = str(uuid.uuid4())
+
+    steps_data = []
+    if payload.steps:
+        steps_data = [
+            {
+                "step_name": s.step_name,
+                "assigned_role": s.assigned_role.value,
+                "step_order": s.step_order,
+                "is_terminal": s.is_terminal,
+            }
+            for s in payload.steps
+        ]
+
     workflow = repo.create_workflow(
         workflow_id=workflow_id,
         institution_id=int(current_user["institution_id"]),
@@ -43,6 +56,7 @@ def create_workflow(
         name=payload.name,
         description=payload.description,
         form_id=payload.form_id,
+        steps=steps_data,
     )
     return workflow
 
@@ -81,7 +95,9 @@ def list_workflows(
         {
             "workflow_id": wf.id,
             "name": wf.name,
+            "description": wf.description,
             "status": wf.status,
+            "step_count": len(wf.steps) if wf.steps else 0,
             "created_at": wf.created_at,
             "updated_at": wf.updated_at,
         }

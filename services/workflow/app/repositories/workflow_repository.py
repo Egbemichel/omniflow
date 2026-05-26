@@ -17,6 +17,7 @@ class WorkflowRepository:
         name: str,
         description: str | None,
         form_id: str | None,
+        steps: List[dict] | None = None,
     ) -> Workflow:
         workflow = Workflow(
             id=workflow_id,
@@ -28,6 +29,18 @@ class WorkflowRepository:
             status="DRAFT",
         )
         self.session.add(workflow)
+
+        if steps:
+            for s_data in steps:
+                step = WorkflowStep(
+                    workflow_id=workflow_id,
+                    step_name=s_data["step_name"],
+                    assigned_role=s_data["assigned_role"],
+                    step_order=s_data["step_order"],
+                    is_terminal=s_data.get("is_terminal", False),
+                )
+                self.session.add(step)
+
         self.session.commit()
         self.session.refresh(workflow)
         return workflow

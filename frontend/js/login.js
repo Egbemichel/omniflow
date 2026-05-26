@@ -1,4 +1,5 @@
 import { api } from './api.js';
+import { auth } from './auth.js';
 
 const loginForm = document.querySelector('form');
 const emailInput = document.getElementById('email');
@@ -47,7 +48,7 @@ if (token) {
 
     api.auth.verify(token).then(res => {
         if (res.access_token) {
-            localStorage.setItem('token', res.access_token);
+            auth.saveToken(res.access_token);
             window.location.href = '/dashboard.html';
         } else {
             alert('Invalid or expired link');

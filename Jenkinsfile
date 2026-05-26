@@ -38,10 +38,10 @@ pipeline {
                     ruff format --check services/
 
                     echo "--- Bandit security scan ---"
-                    bandit -r services/ -ll -x services/auth/tests,services/form/tests,services/workflow/tests -q
+                    bandit -r services/ -ll -x services/auth/tests,services/form/tests,services/workflow/tests,services/task/tests,services/notification/tests -q
 
                     echo "--- pip-audit CVE check ---"
-                    for svc in auth form workflow; do
+                    for svc in auth form workflow task notification; do
                         echo "Auditing $svc..."
                         pip-audit -r services/$svc/requirements.txt --progress-spinner off \
                             --ignore-vuln CVE-2026-30922 \
@@ -84,7 +84,7 @@ pipeline {
                     done
 
                     FAILED=0
-                    for svc in auth form workflow; do
+                    for svc in auth form workflow task notification; do
                         echo "====== Testing $svc ======"
 
                         docker run --rm \
@@ -139,9 +139,12 @@ pipeline {
             steps {
                 sh '''
                     echo "Building all service images (tag: ${IMAGE_TAG})..."
-                    docker build -t pk-auth:${IMAGE_TAG}     ./services/auth
-                    docker build -t pk-form:${IMAGE_TAG}     ./services/form
-                    docker build -t pk-workflow:${IMAGE_TAG} ./services/workflow
+                    docker build -t pk-auth:${IMAGE_TAG}         ./services/auth
+                    docker build -t pk-form:${IMAGE_TAG}         ./services/form
+                    docker build -t pk-workflow:${IMAGE_TAG}     ./services/workflow
+                    docker build -t pk-task:${IMAGE_TAG}         ./services/task
+                    docker build -t pk-notification:${IMAGE_TAG} ./services/notification
+                    docker build -t pk-frontend:${IMAGE_TAG}     ./frontend
 
                     echo "All images built successfully"
                     docker images | grep "^pk-"
@@ -156,7 +159,7 @@ pipeline {
                 sh '''
                     echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USER --password-stdin
 
-                    for svc in auth form workflow; do
+                    for svc in auth form workflow task notification frontend; do
                         docker tag pk-${svc}:${IMAGE_TAG} ${IMAGE_PREFIX}-${svc}:${IMAGE_TAG}
                         docker tag pk-${svc}:${IMAGE_TAG} ${IMAGE_PREFIX}-${svc}:latest
                         docker push ${IMAGE_PREFIX}-${svc}:${IMAGE_TAG}
@@ -183,11 +186,11 @@ pipeline {
         //     }
         //     steps {
         //         sh '''
-        //             for svc in auth form workflow; do
+        //             for svc in auth form workflow task notification frontend; do
         //                 kubectl set image deployment/pk-${svc} \
         //                     pk-${svc}=${IMAGE_PREFIX}-${svc}:${IMAGE_TAG}
         //             done
-        //             for svc in auth form workflow; do
+        //             for svc in auth form workflow task notification frontend; do
         //                 kubectl rollout status deployment/pk-${svc} --timeout=300s
         //             done
         //         '''
@@ -201,7 +204,7 @@ pipeline {
         //     steps {
         //         sh '''
         //             sleep 15
-        //             for port in 8001 8002 8003; do
+        //             for port in 8001 8002 8003 8004 8005; do
         //                 STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${port}/health)
         //                 if [ "$STATUS" != "200" ]; then
         //                     echo "SMOKE TEST FAILED: port ${port} returned ${STATUS}"
