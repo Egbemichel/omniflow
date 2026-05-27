@@ -62,6 +62,11 @@ pipeline {
         stage('Tests') {
             steps {
                 sh '''
+
+                    # Clean up any leftover containers from previous runs
+                    docker rm -f pk-postgres-test pk-redis-test 2>/dev/null || true
+                    docker network rm pk-ci-network 2>/dev/null || true
+
                     docker network create pk-ci-network || true
 
                     docker run -d \
