@@ -18,7 +18,7 @@ from app.utils.oauth_config import get_oauth_settings
 router = APIRouter()
 
 
-@router.get("/auth/oauth/google/callback")
+@router.get("/oauth/google/callback")
 def google_callback(code: str, db: Session = Depends(get_db)):
     try:
         settings = get_oauth_settings()
@@ -69,7 +69,7 @@ def google_callback(code: str, db: Session = Depends(get_db)):
     return RedirectResponse(url=f"{frontend_url}/oauth-success.html#token={token}")
 
 
-@router.get("/auth/oauth/github/callback")
+@router.get("/oauth/github/callback")
 def github_callback(code: str, db: Session = Depends(get_db)):
     try:
         settings = get_oauth_settings()
