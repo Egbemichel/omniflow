@@ -10,7 +10,7 @@ from app.repositories.user_repository import UserRepository
 from app.services.jwt_service import create_access_token
 from app.services.oauth_service import (
     OAuthError,
-    # exchange_github_code,
+    exchange_github_code,
     exchange_google_code,
 )
 from app.utils.oauth_config import get_oauth_settings
@@ -55,6 +55,59 @@ def google_callback(code: str, db: Session = Depends(get_db)):
     if not user.is_active:
         frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
         return RedirectResponse(url=f"{frontend_url}/index.html?error=inactive")
+
+    token = create_access_token(
+        {
+            "sub": user.id,
+            "email": user.email,
+            "role": user.role,
+            "institution_id": user.institution_id,
+        }
+    )
+
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
+    return RedirectResponse(url=f"{frontend_url}/oauth-success.html#token={token}")
+
+
+@router.get("/auth/oauth/github/callback")
+def github_callback(code: str, db: Session = Depends(get_db)):
+    try:
+        settings = get_oauth_settings()
+    except RuntimeError:
+        raise HTTPException(status_code=503, detail="Login method disabled")
+    if not settings.github_enabled:
+        raise HTTPException(status_code=503, detail="Login method disabled")
+
+    redirect_uri = os.getenv(
+        "GITHUB_REDIRECT_URI", "http://localhost/auth/oauth/github/callback"
+    )
+
+    try:
+        user_info = exchange_github_code(
+            settings.github_client_id,
+            settings.github_client_secret,
+            code,
+            redirect_uri,
+        )
+    except OAuthError:
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
+        return RedirectResponse(url=f"{frontend_url}/login.html?error=oauth_failed")
+
+    if not user_info.get("email") or not user_info.get("oauth_id"):
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
+        return RedirectResponse(url=f"{frontend_url}/login.html?error=oauth_failed")
+
+    repo = UserRepository(db)
+    user, _ = repo.upsert_oauth_user(
+        email=user_info["email"],
+        provider="github",
+        oauth_id=user_info["oauth_id"],
+        full_name=user_info.get("full_name"),
+        institution_id=1,
+    )
+    if not user.is_active:
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
+        return RedirectResponse(url=f"{frontend_url}/login.html?error=inactive")
 
     token = create_access_token(
         {

@@ -53,3 +53,17 @@ googleButton?.addEventListener("click", () => {
     const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
     window.location.href = url;
 });
+
+document.getElementById("btn-github").addEventListener("click", () => {
+    if (!window.PK_CONFIG || !window.PK_CONFIG.GITHUB_CLIENT_ID) {
+        alert("GitHub login is not configured.");
+        return;
+    }
+
+    const clientId = window.PK_CONFIG.GITHUB_CLIENT_ID;
+    const configuredRedirectUri = window.PK_CONFIG.GITHUB_REDIRECT_URI || `${window.location.origin}/auth/oauth/github/callback`;
+    const redirectUri = encodeURIComponent(configuredRedirectUri);
+    const scope = encodeURIComponent("user:email");
+    const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
+    window.location.href = url;
+});
