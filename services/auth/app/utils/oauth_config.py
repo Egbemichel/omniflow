@@ -8,6 +8,7 @@ class OAuthSettings:
 
     google_client_id: str
     google_client_secret: str
+    google_redirect_uri: str
     github_client_id: str
     github_client_secret: str
     magic_link_secret: str
@@ -30,6 +31,7 @@ def get_oauth_settings() -> OAuthSettings:
     """Load OAuth and magic link settings from environment."""
     google_client_id = os.getenv("GOOGLE_CLIENT_ID", "")
     google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    google_redirect_uri = os.getenv("GOOGLE_REDIRECT_URI", "")
     github_client_id = os.getenv("GITHUB_CLIENT_ID", "")
     github_client_secret = os.getenv("GITHUB_CLIENT_SECRET", "")
     magic_link_secret = os.getenv("MAGIC_LINK_SECRET", "")
@@ -44,7 +46,9 @@ def get_oauth_settings() -> OAuthSettings:
     )
     magic_link_enabled = _get_bool("MAGIC_LINK_ENABLED", bool(magic_link_secret))
 
-    if google_enabled and (not google_client_id or not google_client_secret):
+    if google_enabled and (
+        not google_client_id or not google_client_secret or not google_redirect_uri
+    ):
         raise RuntimeError("Google OAuth is enabled but missing credentials")
     if github_enabled and (not github_client_id or not github_client_secret):
         raise RuntimeError("GitHub OAuth is enabled but missing credentials")
@@ -54,6 +58,7 @@ def get_oauth_settings() -> OAuthSettings:
     return OAuthSettings(
         google_client_id=google_client_id,
         google_client_secret=google_client_secret,
+        google_redirect_uri=google_redirect_uri,
         github_client_id=github_client_id,
         github_client_secret=github_client_secret,
         magic_link_secret=magic_link_secret,

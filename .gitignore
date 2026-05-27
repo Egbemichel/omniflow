@@ -35,3 +35,5 @@ context/
 
 # AGENTS
 AGENTS.md
+
+frontend/config.js

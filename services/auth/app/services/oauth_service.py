@@ -14,18 +14,17 @@ class OAuthError(Exception):
 def exchange_google_code(
     client_id: str, client_secret: str, code: str, redirect_uri: str
 ) -> Dict[str, str]:
-    """Exchange a Google OAuth code for user identity."""
     token_url = "https://oauth2.googleapis.com/token"
     userinfo_url = "https://openidconnect.googleapis.com/v1/userinfo"
     try:
         client = OAuth2Client(client_id, client_secret)
-        token = client.fetch_token(
+        client.fetch_token(
             token_url,
             code=code,
             redirect_uri=redirect_uri,
             grant_type="authorization_code",
         )
-        resp = client.get(userinfo_url, token=token)
+        resp = client.get(userinfo_url)  # token is stored on client after fetch_token
         resp.raise_for_status()
         data = resp.json()
         return {
@@ -41,25 +40,24 @@ def exchange_google_code(
 def exchange_github_code(
     client_id: str, client_secret: str, code: str, redirect_uri: str
 ) -> Dict[str, str]:
-    """Exchange a GitHub OAuth code for user identity."""
     token_url = "https://github.com/login/oauth/access_token"
     user_url = "https://api.github.com/user"
     emails_url = "https://api.github.com/user/emails"
     try:
         client = OAuth2Client(client_id, client_secret)
-        token = client.fetch_token(
+        client.fetch_token(
             token_url,
             code=code,
             redirect_uri=redirect_uri,
             grant_type="authorization_code",
         )
-        user_resp = client.get(user_url, token=token)
+        user_resp = client.get(user_url)  # same fix here
         user_resp.raise_for_status()
         user_data = user_resp.json()
 
         email = user_data.get("email")
         if not email:
-            emails_resp = client.get(emails_url, token=token)
+            emails_resp = client.get(emails_url)  # and here
             emails_resp.raise_for_status()
             emails = emails_resp.json()
             primary = next((e for e in emails if e.get("primary")), None)

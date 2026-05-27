@@ -33,6 +33,9 @@ os.environ.setdefault("MAGIC_LINK_TTL_SECONDS", "900")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 os.environ.setdefault("GOOGLE_CLIENT_ID", "test_google_id")
 os.environ.setdefault("GOOGLE_CLIENT_SECRET", "test_google_secret")
+os.environ.setdefault(
+    "GOOGLE_REDIRECT_URI", "http://localhost/auth/oauth/google/callback"
+)
 os.environ.setdefault("GITHUB_CLIENT_ID", "test_github_id")
 os.environ.setdefault("GITHUB_CLIENT_SECRET", "test_github_secret")
 

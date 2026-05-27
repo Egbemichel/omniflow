@@ -35,3 +35,21 @@ export const auth = {
     };
   }
 };
+
+const googleButton = document.getElementById("btn-google");
+
+googleButton?.addEventListener("click", () => {
+    console.log("clicked, config:", window.PK_CONFIG);
+
+    if (!window.PK_CONFIG || !window.PK_CONFIG.GOOGLE_CLIENT_ID) {
+        alert("Google login is not configured.");
+        return;
+    }
+
+    const clientId = window.PK_CONFIG.GOOGLE_CLIENT_ID;
+    const configuredRedirectUri = window.PK_CONFIG.GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/oauth/google/callback`;
+    const redirectUri = encodeURIComponent(configuredRedirectUri);
+    const scope = encodeURIComponent("email profile");
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
+    window.location.href = url;
+});

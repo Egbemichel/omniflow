@@ -36,6 +36,10 @@ services:
       JWT_SECRET: dev_secret_key
       JWT_ALGORITHM: HS256
       JWT_EXPIRE_MINUTES: 60
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+      FRONTEND_URL: http://localhost
     depends_on:
       postgres:
         condition: service_healthy
@@ -102,6 +106,11 @@ services:
     build: ./frontend
     expose:
       - "80"
+    environment:
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+    volumes:
+    - ./frontend:/usr/share/nginx/html
 
   gateway:
     image: nginx:alpine
