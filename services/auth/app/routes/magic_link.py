@@ -5,11 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.repositories.user_repository import UserRepository
 from app.services.jwt_service import create_access_token
-from app.services.magic_link_service import (
-    build_magic_link,
-    generate_magic_token,
-    verify_magic_token,
-)
+from app.services.magic_link_service import MagicLinkService, get_magic_link_config
 from app.services.email_service import send_magic_link
 from pydantic import BaseModel, EmailStr
 
@@ -20,22 +16,37 @@ class MagicLinkRequest(BaseModel):
     email: EmailStr
 
 
+# ── Dependency — tests can override this via app.dependency_overrides ───────
+def get_magic_link_service() -> MagicLinkService:
+    return MagicLinkService(get_magic_link_config())
+
+
 @router.post("/magic-link/request")
-def request_magic_link(payload: MagicLinkRequest):
-    """Generate a token and email the magic link."""
-    token = generate_magic_token(payload.email)
-    link = build_magic_link(token)
+def request_magic_link(
+    payload: MagicLinkRequest,
+    svc: MagicLinkService = Depends(get_magic_link_service),
+):
+    token = svc.generate_token(payload.email)
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
+    link = f"{frontend_url}/api/auth/magic-link/verify?token={token}"
     send_magic_link(payload.email, link)
-    # Always return 200 even if email not registered (security best practice)
     return {"message": "If that email is registered, a sign-in link has been sent."}
 
 
 @router.get("/magic-link/verify")
-def verify_magic_link(token: str, db: Session = Depends(get_db)):
-    """Verify the token, issue JWT, redirect to frontend."""
-    email = verify_magic_token(token)
+def verify_magic_link(
+    token: str,
+    db: Session = Depends(get_db),
+    svc: MagicLinkService = Depends(get_magic_link_service),
+):
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
+
+    try:
+        email = svc.verify_token(token)
+    except ValueError:
+        return RedirectResponse(url=f"{frontend_url}/login.html?error=invalid_link")
+
     if not email:
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
         return RedirectResponse(url=f"{frontend_url}/login.html?error=invalid_link")
 
     repo = UserRepository(db)
@@ -50,7 +61,6 @@ def verify_magic_link(token: str, db: Session = Depends(get_db)):
         )
 
     if not user.is_active:
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
         return RedirectResponse(url=f"{frontend_url}/login.html?error=inactive")
 
     token_jwt = create_access_token(
@@ -62,5 +72,4 @@ def verify_magic_link(token: str, db: Session = Depends(get_db)):
         }
     )
 
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
     return RedirectResponse(url=f"{frontend_url}/oauth-success.html#token={token_jwt}")
