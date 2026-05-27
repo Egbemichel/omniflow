@@ -67,3 +67,32 @@ document.getElementById("btn-github").addEventListener("click", () => {
     const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
     window.location.href = url;
 });
+
+document.getElementById("magic-link-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById("email").value;
+    if (!email) return;
+
+    const btn = e.target.querySelector("button[type=submit]");
+    btn.textContent = "Sending...";
+    btn.disabled = true;
+
+    try {
+        const resp = await fetch("/api/auth/magic-link/request", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+        });
+
+        if (resp.ok) {
+            btn.textContent = "Check your email!";
+        } else {
+            btn.textContent = "Something went wrong. Try again.";
+            btn.disabled = false;
+        }
+    } catch (err) {
+        btn.textContent = "Something went wrong. Try again.";
+        btn.disabled = false;
+    }
+});

@@ -1,65 +1,59 @@
-from fastapi import APIRouter, Depends, HTTPException
+import os
+from fastapi import APIRouter, Depends
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.repositories.user_repository import UserRepository
-from app.schemas.auth_schema import MagicLinkRequest, TokenResponse
 from app.services.jwt_service import create_access_token
-from app.services.magic_link_service import MagicLinkService, get_magic_link_config
-from app.utils.oauth_config import get_oauth_settings
+from app.services.magic_link_service import (
+    build_magic_link,
+    generate_magic_token,
+    verify_magic_token,
+)
+from app.services.email_service import send_magic_link
+from pydantic import BaseModel, EmailStr
 
 router = APIRouter()
 
 
-def get_magic_link_service() -> MagicLinkService:
-    settings = get_oauth_settings()
-    if not settings.magic_link_enabled:
-        raise HTTPException(status_code=503, detail="Login method disabled")
-    config = get_magic_link_config()
-    return MagicLinkService(config)
+class MagicLinkRequest(BaseModel):
+    email: EmailStr
 
 
-@router.post("/auth/magic/login")
-def request_magic_link(
-    payload: MagicLinkRequest,
-    service: MagicLinkService = Depends(get_magic_link_service),
-):
-    try:
-        token = service.generate_token(payload.email)
-        # In DEV, we can see the link in logs
-        print(
-            f"DEBUG: Magic Link for {payload.email}: http://localhost/login.html?token={token}"
-        )
-    except Exception:
-        raise HTTPException(status_code=500, detail="Login failed")
-    return {"msg": "Magic link sent", "token": token}
+@router.post("/magic-link/request")
+def request_magic_link(payload: MagicLinkRequest):
+    """Generate a token and email the magic link."""
+    token = generate_magic_token(payload.email)
+    link = build_magic_link(token)
+    send_magic_link(payload.email, link)
+    # Always return 200 even if email not registered (security best practice)
+    return {"message": "If that email is registered, a sign-in link has been sent."}
 
 
-@router.get("/auth/magic/verify", response_model=TokenResponse)
-def verify_magic_link(
-    token: str,
-    db: Session = Depends(get_db),
-    service: MagicLinkService = Depends(get_magic_link_service),
-):
-    try:
-        email = service.verify_token(token)
-    except Exception:
-        raise HTTPException(status_code=401, detail="Login failed")
-
+@router.get("/magic-link/verify")
+def verify_magic_link(token: str, db: Session = Depends(get_db)):
+    """Verify the token, issue JWT, redirect to frontend."""
+    email = verify_magic_token(token)
     if not email:
-        raise HTTPException(status_code=401, detail="Login failed")
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
+        return RedirectResponse(url=f"{frontend_url}/login.html?error=invalid_link")
 
     repo = UserRepository(db)
-    user, _ = repo.upsert_oauth_user(
-        email=email,
-        provider="magic_link",
-        oauth_id=email,
-        full_name=None,
-        institution_id=1,
-    )
-    if not user.is_active:
-        raise HTTPException(status_code=403, detail="User inactive")
+    user = repo.get_by_email(email)
+    if not user:
+        user, _ = repo.upsert_oauth_user(
+            email=email,
+            provider="magic_link",
+            oauth_id=email,
+            full_name=None,
+            institution_id=1,
+        )
 
-    token = create_access_token(
+    if not user.is_active:
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
+        return RedirectResponse(url=f"{frontend_url}/login.html?error=inactive")
+
+    token_jwt = create_access_token(
         {
             "sub": user.id,
             "email": user.email,
@@ -67,4 +61,6 @@ def verify_magic_link(
             "institution_id": user.institution_id,
         }
     )
-    return {"access_token": token, "token_type": "bearer"}
+
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
+    return RedirectResponse(url=f"{frontend_url}/oauth-success.html#token={token_jwt}")
