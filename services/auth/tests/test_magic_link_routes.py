@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from app.repositories.user_repository import UserRepository
 
 
@@ -13,7 +13,6 @@ def test_magic_link_request_and_verify_flow(
     assert response.status_code == 200
     assert "sign-in link" in response.json()["message"]
 
-    # Get the token directly from the magic link service via the override
     svc = client_with_magic_link_override.app.dependency_overrides[
         __import__(
             "app.routes.magic_link", fromlist=["get_magic_link_service"]
@@ -61,3 +60,49 @@ def test_magic_link_invalid_token_returns_401(client_with_magic_link_override):
     )
     assert response.status_code in (302, 307)
     assert "invalid_link" in response.headers["location"]
+
+
+def test_magic_link_request_disabled(client, monkeypatch):
+    monkeypatch.setattr(
+        "app.routes.magic_link.get_magic_link_service",
+        lambda: (_ for _ in ()).throw(RuntimeError("not configured")),
+    )
+    response = client.post(
+        "/auth/magic-link/request",
+        json={"email": "test@pk.com"},
+    )
+    assert response.status_code == 503
+
+
+def test_magic_link_request_sends_email(client_with_magic_link_override, monkeypatch):
+    sent = []
+    monkeypatch.setattr(
+        "app.routes.magic_link.send_magic_link",
+        lambda email, link: sent.append((email, link)),
+    )
+    response = client_with_magic_link_override.post(
+        "/auth/magic-link/request",
+        json={"email": "send@pk.com"},
+    )
+    assert response.status_code == 200
+    assert len(sent) == 1
+    assert sent[0][0] == "send@pk.com"
+    assert "magic-link/verify" in sent[0][1]
+
+
+def test_magic_link_verify_inactive_user(
+    client_with_magic_link_override, magic_link_service, monkeypatch
+):
+    token = magic_link_service.generate_token("inactive@pk.com")
+    inactive = MagicMock()
+    inactive.is_active = False
+    monkeypatch.setattr(
+        "app.routes.magic_link.UserRepository.get_by_email",
+        lambda *a, **kw: inactive,
+    )
+    response = client_with_magic_link_override.get(
+        f"/auth/magic-link/verify?token={token}",
+        follow_redirects=False,
+    )
+    assert response.status_code in (302, 307)
+    assert "inactive" in response.headers["location"]

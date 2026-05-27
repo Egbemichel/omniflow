@@ -61,7 +61,6 @@ def test_google_login_exchange_error_returns_401(client, monkeypatch):
 
 
 def test_google_login_missing_email_returns_401(client, monkeypatch):
-    """exchange returns a dict with no email — route must return 401."""
     monkeypatch.setattr(
         "app.routes.oauth.exchange_google_code",
         lambda *a, **kw: {"email": None, "oauth_id": "google-123", "full_name": "X"},
@@ -74,7 +73,6 @@ def test_google_login_missing_email_returns_401(client, monkeypatch):
 
 
 def test_google_login_missing_oauth_id_returns_401(client, monkeypatch):
-    """exchange returns a dict with no oauth_id — route must return 401."""
     monkeypatch.setattr(
         "app.routes.oauth.exchange_google_code",
         lambda *a, **kw: {"email": "x@x.com", "oauth_id": None, "full_name": "X"},
@@ -87,7 +85,6 @@ def test_google_login_missing_oauth_id_returns_401(client, monkeypatch):
 
 
 def test_google_login_inactive_user_returns_403(client, db_session, monkeypatch):
-    """User exists but is inactive — route must return 403."""
     monkeypatch.setattr(
         "app.routes.oauth.exchange_google_code",
         lambda *a, **kw: {
@@ -96,16 +93,12 @@ def test_google_login_inactive_user_returns_403(client, db_session, monkeypatch)
             "full_name": "Inactive",
         },
     )
-
-    # Patch upsert to return an inactive user
     inactive = MagicMock()
     inactive.is_active = False
-
     monkeypatch.setattr(
         "app.routes.oauth.UserRepository.upsert_oauth_user",
         lambda *a, **kw: (inactive, False),
     )
-
     response = client.post(
         "/auth/google",
         json={"code": "test", "redirect_uri": "https://app/callback"},
@@ -114,11 +107,9 @@ def test_google_login_inactive_user_returns_403(client, db_session, monkeypatch)
 
 
 def test_google_login_disabled_returns_503(client, monkeypatch):
-    """When google_enabled=False the route returns 503."""
     mock_settings = MagicMock()
     mock_settings.google_enabled = False
     monkeypatch.setattr("app.routes.oauth.get_oauth_settings", lambda: mock_settings)
-
     response = client.post(
         "/auth/google",
         json={"code": "test", "redirect_uri": "https://app/callback"},
@@ -127,7 +118,6 @@ def test_google_login_disabled_returns_503(client, monkeypatch):
 
 
 def test_google_login_settings_runtime_error_returns_503(client, monkeypatch):
-    """When get_oauth_settings raises RuntimeError the route returns 503."""
     monkeypatch.setattr(
         "app.routes.oauth.get_oauth_settings",
         lambda: (_ for _ in ()).throw(RuntimeError("missing env")),
@@ -153,7 +143,6 @@ def test_github_login_creates_user_and_returns_token(client, db_session, monkeyp
             "full_name": "Dev User",
         },
     )
-
     response = client.post(
         "/auth/github",
         json={"code": "test", "redirect_uri": "https://app/callback"},
@@ -199,7 +188,6 @@ def test_github_login_disabled_returns_503(client, monkeypatch):
     mock_settings = MagicMock()
     mock_settings.github_enabled = False
     monkeypatch.setattr("app.routes.oauth.get_oauth_settings", lambda: mock_settings)
-
     response = client.post(
         "/auth/github",
         json={"code": "test", "redirect_uri": "https://app/callback"},
@@ -230,12 +218,126 @@ def test_github_login_inactive_user_returns_403(client, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# oauth_service unit tests (covers the 20% gap directly)
+# OAuth callback route tests (covers lines 98-165)
+# ---------------------------------------------------------------------------
+
+
+def test_google_callback_success(client, db_session, monkeypatch):
+    monkeypatch.setattr(
+        "app.routes.oauth.exchange_google_code",
+        lambda *a, **kw: {
+            "email": "cb@google.com",
+            "oauth_id": "g-cb-1",
+            "full_name": "CB",
+        },
+    )
+    mock_settings = MagicMock()
+    mock_settings.google_enabled = True
+    mock_settings.google_client_id = "id"
+    mock_settings.google_client_secret = "secret"
+    mock_settings.google_redirect_uri = "http://localhost/auth/oauth/google/callback"
+    monkeypatch.setattr("app.routes.oauth.get_oauth_settings", lambda: mock_settings)
+
+    response = client.get(
+        "/auth/oauth/google/callback?code=testcode",
+        follow_redirects=False,
+    )
+    assert response.status_code in (302, 307)
+    assert "oauth-success.html" in response.headers["location"]
+
+
+def test_google_callback_oauth_error(client, monkeypatch):
+    monkeypatch.setattr(
+        "app.routes.oauth.exchange_google_code",
+        lambda *a, **kw: (_ for _ in ()).throw(OAuthError("fail")),
+    )
+    mock_settings = MagicMock()
+    mock_settings.google_enabled = True
+    mock_settings.google_client_id = "id"
+    mock_settings.google_client_secret = "secret"
+    mock_settings.google_redirect_uri = "http://localhost/auth/oauth/google/callback"
+    monkeypatch.setattr("app.routes.oauth.get_oauth_settings", lambda: mock_settings)
+
+    response = client.get(
+        "/auth/oauth/google/callback?code=bad",
+        follow_redirects=False,
+    )
+    assert response.status_code in (302, 307)
+    assert "oauth_failed" in response.headers["location"]
+
+
+def test_google_callback_disabled(client, monkeypatch):
+    mock_settings = MagicMock()
+    mock_settings.google_enabled = False
+    monkeypatch.setattr("app.routes.oauth.get_oauth_settings", lambda: mock_settings)
+
+    response = client.get(
+        "/auth/oauth/google/callback?code=x",
+        follow_redirects=False,
+    )
+    assert response.status_code == 503
+
+
+def test_github_callback_success(client, db_session, monkeypatch):
+    monkeypatch.setattr(
+        "app.routes.oauth.exchange_github_code",
+        lambda *a, **kw: {
+            "email": "cb@github.com",
+            "oauth_id": "gh-cb-1",
+            "full_name": "CB",
+        },
+    )
+    mock_settings = MagicMock()
+    mock_settings.github_enabled = True
+    mock_settings.github_client_id = "id"
+    mock_settings.github_client_secret = "secret"
+    monkeypatch.setattr("app.routes.oauth.get_oauth_settings", lambda: mock_settings)
+
+    response = client.get(
+        "/auth/oauth/github/callback?code=testcode",
+        follow_redirects=False,
+    )
+    assert response.status_code in (302, 307)
+    assert "oauth-success.html" in response.headers["location"]
+
+
+def test_github_callback_oauth_error(client, monkeypatch):
+    monkeypatch.setattr(
+        "app.routes.oauth.exchange_github_code",
+        lambda *a, **kw: (_ for _ in ()).throw(OAuthError("fail")),
+    )
+    mock_settings = MagicMock()
+    mock_settings.github_enabled = True
+    mock_settings.github_client_id = "id"
+    mock_settings.github_client_secret = "secret"
+    monkeypatch.setattr("app.routes.oauth.get_oauth_settings", lambda: mock_settings)
+
+    response = client.get(
+        "/auth/oauth/github/callback?code=bad",
+        follow_redirects=False,
+    )
+    assert response.status_code in (302, 307)
+    assert "oauth_failed" in response.headers["location"]
+
+
+def test_github_callback_disabled(client, monkeypatch):
+    mock_settings = MagicMock()
+    mock_settings.github_enabled = False
+    monkeypatch.setattr("app.routes.oauth.get_oauth_settings", lambda: mock_settings)
+
+    response = client.get(
+        "/auth/oauth/github/callback?code=x",
+        follow_redirects=False,
+    )
+    assert response.status_code == 503
+
+
+# ---------------------------------------------------------------------------
+# oauth_service unit tests
 # ---------------------------------------------------------------------------
 
 
 def test_exchange_google_code_raises_oauth_error_on_failure():
-    """exchange_google_code wraps any exception in OAuthError."""
     with patch("app.services.oauth_service.OAuth2Client") as MockClient:
         MockClient.return_value.fetch_token.side_effect = Exception("network error")
         with pytest.raises(OAuthError):
@@ -243,7 +345,6 @@ def test_exchange_google_code_raises_oauth_error_on_failure():
 
 
 def test_exchange_google_code_returns_user_info():
-    """exchange_google_code maps Google userinfo fields correctly."""
     mock_token = {"access_token": "tok"}
     mock_resp = MagicMock()
     mock_resp.json.return_value = {
@@ -266,7 +367,6 @@ def test_exchange_google_code_returns_user_info():
 
 
 def test_exchange_github_code_raises_oauth_error_on_failure():
-    """exchange_github_code wraps any exception in OAuthError."""
     with patch("app.services.oauth_service.OAuth2Client") as MockClient:
         MockClient.return_value.fetch_token.side_effect = Exception("network error")
         with pytest.raises(OAuthError):
@@ -274,7 +374,6 @@ def test_exchange_github_code_raises_oauth_error_on_failure():
 
 
 def test_exchange_github_code_returns_user_info():
-    """exchange_github_code maps GitHub user fields correctly."""
     mock_token = {"access_token": "tok"}
     mock_user_resp = MagicMock()
     mock_user_resp.json.return_value = {
@@ -298,9 +397,7 @@ def test_exchange_github_code_returns_user_info():
 
 
 def test_exchange_github_code_fetches_email_from_emails_endpoint():
-    """When user.email is None, falls back to /user/emails endpoint."""
     mock_token = {"access_token": "tok"}
-
     mock_user_resp = MagicMock()
     mock_user_resp.json.return_value = {
         "email": None,
@@ -325,4 +422,4 @@ def test_exchange_github_code_fetches_email_from_emails_endpoint():
         result = exchange_github_code("id", "secret", "code", "https://redirect")
 
     assert result["email"] == "primary@gh.com"
-    assert result["full_name"] == "nomail"  # falls back to login
+    assert result["full_name"] == "nomail"
