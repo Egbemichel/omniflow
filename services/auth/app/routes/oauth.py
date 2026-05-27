@@ -49,7 +49,7 @@ def _token_response_for_oauth_user(
     return {"access_token": token, "token_type": "bearer"}
 
 
-@router.post("/auth/google", response_model=TokenResponse)
+@router.post("/google", response_model=TokenResponse)
 def google_login(payload: OAuthCodeRequest, db: Session = Depends(get_db)):
     try:
         settings = get_oauth_settings()
@@ -71,7 +71,7 @@ def google_login(payload: OAuthCodeRequest, db: Session = Depends(get_db)):
     return _token_response_for_oauth_user(db, provider="google", user_info=user_info)
 
 
-@router.post("/auth/github", response_model=TokenResponse)
+@router.post("/github", response_model=TokenResponse)
 def github_login(payload: OAuthCodeRequest, db: Session = Depends(get_db)):
     try:
         settings = get_oauth_settings()
@@ -93,7 +93,7 @@ def github_login(payload: OAuthCodeRequest, db: Session = Depends(get_db)):
     return _token_response_for_oauth_user(db, provider="github", user_info=user_info)
 
 
-@router.get("/auth/oauth/google/callback")
+@router.get("/oauth/google/callback")
 def google_callback(code: str, db: Session = Depends(get_db)):
     try:
         settings = get_oauth_settings()
@@ -129,7 +129,7 @@ def google_callback(code: str, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/auth/oauth/github/callback")
+@router.get("/oauth/github/callback")
 def github_callback(code: str, db: Session = Depends(get_db)):
     try:
         settings = get_oauth_settings()
