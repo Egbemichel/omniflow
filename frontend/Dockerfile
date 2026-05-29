@@ -1,9 +1,14 @@
 FROM nginx:alpine
 
-# Copy the frontend files
+# Copy frontend files
 COPY . /usr/share/nginx/html
 
-# The standard Nginx configuration serves from /usr/share/nginx/html on port 80
+# Copy and enable the entrypoint script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN apk add --no-cache dos2unix && \
+    dos2unix /docker-entrypoint.sh && \
+    chmod +x /docker-entrypoint.sh
+
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/docker-entrypoint.sh"]

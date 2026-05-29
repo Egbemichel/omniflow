@@ -35,3 +35,64 @@ export const auth = {
     };
   }
 };
+
+const googleButton = document.getElementById("btn-google");
+
+googleButton?.addEventListener("click", () => {
+    console.log("clicked, config:", window.PK_CONFIG);
+
+    if (!window.PK_CONFIG || !window.PK_CONFIG.GOOGLE_CLIENT_ID) {
+        alert("Google login is not configured.");
+        return;
+    }
+
+    const clientId = window.PK_CONFIG.GOOGLE_CLIENT_ID;
+    const configuredRedirectUri = window.PK_CONFIG.GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/oauth/google/callback`;
+    const redirectUri = encodeURIComponent(configuredRedirectUri);
+    const scope = encodeURIComponent("email profile");
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
+    window.location.href = url;
+});
+
+document.getElementById("btn-github").addEventListener("click", () => {
+    if (!window.PK_CONFIG || !window.PK_CONFIG.GITHUB_CLIENT_ID) {
+        alert("GitHub login is not configured.");
+        return;
+    }
+
+    const clientId = window.PK_CONFIG.GITHUB_CLIENT_ID;
+    const configuredRedirectUri = window.PK_CONFIG.GITHUB_REDIRECT_URI || `${window.location.origin}/auth/oauth/github/callback`;
+    const redirectUri = encodeURIComponent(configuredRedirectUri);
+    const scope = encodeURIComponent("user:email");
+    const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
+    window.location.href = url;
+});
+
+document.getElementById("magic-link-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById("email").value;
+    if (!email) return;
+
+    const btn = e.target.querySelector("button[type=submit]");
+    btn.textContent = "Sending...";
+    btn.disabled = true;
+
+    try {
+        const resp = await fetch("/api/auth/magic-link/request", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+        });
+
+        if (resp.ok) {
+            btn.textContent = "Check your email!";
+        } else {
+            btn.textContent = "Something went wrong. Try again.";
+            btn.disabled = false;
+        }
+    } catch (err) {
+        btn.textContent = "Something went wrong. Try again.";
+        btn.disabled = false;
+    }
+});

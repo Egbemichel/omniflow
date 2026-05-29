@@ -36,6 +36,17 @@ services:
       JWT_SECRET: dev_secret_key
       JWT_ALGORITHM: HS256
       JWT_EXPIRE_MINUTES: 60
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI}
+      FRONTEND_URL: http://localhost
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      MAGIC_LINK_FROM_EMAIL: ${MAGIC_LINK_FROM_EMAIL}
+      MAGIC_LINK_SECRET: ${MAGIC_LINK_SECRET}
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy
@@ -102,6 +113,13 @@ services:
     build: ./frontend
     expose:
       - "80"
+    environment:
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI}
+    volumes:
+    - ./frontend:/usr/share/nginx/html
 
   gateway:
     image: nginx:alpine

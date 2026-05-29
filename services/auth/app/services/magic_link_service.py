@@ -5,6 +5,7 @@ import os
 import uuid
 from dataclasses import dataclass
 from typing import Optional
+
 import redis
 
 
@@ -48,26 +49,21 @@ class MagicLinkService:
         return email
 
     def _sign(self, token_id: str) -> str:
-        """Create a signature for a token id."""
         digest = hmac.new(
             self.config.secret.encode("utf-8"), token_id.encode("utf-8"), hashlib.sha256
         ).digest()
         return base64.urlsafe_b64encode(digest).decode("utf-8").rstrip("=")
 
     def _valid_signature(self, token_id: str, signature: str) -> bool:
-        """Verify a token signature."""
         expected = self._sign(token_id)
         return hmac.compare_digest(expected, signature)
 
     def _split_token(self, token: str):
-        """Split a token into id and signature."""
         if "." not in token:
             raise ValueError("Invalid token")
-        token_id, signature = token.split(".", 1)
-        return token_id, signature
+        return token.split(".", 1)
 
     def _key(self, token_id: str) -> str:
-        """Build a Redis key for a token id."""
         return f"magic_link:{token_id}"
 
 
@@ -76,8 +72,25 @@ def get_magic_link_config() -> MagicLinkConfig:
     secret = os.getenv("MAGIC_LINK_SECRET")
     if not secret:
         raise RuntimeError("MAGIC_LINK_SECRET is required")
-    ttl_seconds = int(os.getenv("MAGIC_LINK_TTL_SECONDS", "900"))
     redis_url = os.getenv("REDIS_URL")
     if not redis_url:
         raise RuntimeError("REDIS_URL is required")
+    ttl_seconds = int(os.getenv("MAGIC_LINK_TTL_SECONDS", "900"))
     return MagicLinkConfig(redis_url=redis_url, secret=secret, ttl_seconds=ttl_seconds)
+
+
+def _default_service() -> MagicLinkService:
+    return MagicLinkService(get_magic_link_config())
+
+
+def generate_magic_token(email: str) -> str:
+    return _default_service().generate_token(email)
+
+
+def verify_magic_token(token: str) -> Optional[str]:
+    return _default_service().verify_token(token)
+
+
+def build_magic_link(token: str) -> str:
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost")
+    return f"{frontend_url}/api/auth/magic-link/verify?token={token}"

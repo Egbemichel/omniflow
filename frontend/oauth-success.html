@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head><title>Signing you in...</title></head>
+<body>
+<script>
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const token = params.get("token");
+    if (token) {
+        localStorage.setItem("of_token", token);  // was pk_token, now matches auth.js
+        window.location.href = "/dashboard.html";
+    } else {
+        window.location.href = "/login.html?error=oauth_failed";
+    }
+</script>
+</body>
+</html>
