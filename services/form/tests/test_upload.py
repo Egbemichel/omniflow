@@ -81,3 +81,28 @@ def test_upload_missing_auth_returns_401(client, upload_dir):
         files={"file": ("test.png", b"fake", "image/png")},
     )
     assert response.status_code == 401
+
+def test_upload_ocr_failure_sets_failed_status(admin_client, db_session, upload_dir, monkeypatch):
+    def fake_extract_failure(self, file_path):
+        raise RuntimeError("OCR engine crashed")
+
+    def fake_publish(self, form_id, institution_id, admin_id, field_count):
+        pass
+
+    monkeypatch.setattr(
+        "app.services.ocr_service.OCRService.extract_fields", fake_extract_failure
+    )
+    monkeypatch.setattr(
+        "app.services.event_service.EventService.publish_ocr_completed", fake_publish
+    )
+
+    response = admin_client.post(
+        "/forms/upload",
+        files={"file": ("test.png", b"fake image content", "image/png")},
+    )
+    assert response.status_code == 201
+    form_id = response.json()["form_id"]
+
+    status_response = admin_client.get(f"/forms/{form_id}/status")
+    assert status_response.status_code == 200
+    assert status_response.json()["status"] == "FAILED"
