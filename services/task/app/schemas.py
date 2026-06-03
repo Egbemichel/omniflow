@@ -20,7 +20,7 @@ class SubmissionOut(BaseModel):
 class SubmissionStatusOut(BaseModel):
     id: str
     status: str
-    current_step: Optional[int] = None
+    current_step_id: Optional[str] = None
     assigned_role: Optional[str] = None
 
     class Config:

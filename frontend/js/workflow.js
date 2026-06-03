@@ -5,10 +5,11 @@ let currentSteps = [];
 
 async function initWorkflows() {
     const user = auth.getUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'staff')) {
+    if (!user || !['super_admin', 'institution_admin', 'admin'].includes(user.role)) {
         window.location.href = 'dashboard.html';
         return;
     }
+    auth.updateUIForRole();
 
     try {
         const response = await api.workflows.list();

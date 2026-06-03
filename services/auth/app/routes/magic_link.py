@@ -8,6 +8,7 @@ from app.schemas.auth_schema import TokenResponse
 from app.services.jwt_service import create_access_token
 from app.services.magic_link_service import MagicLinkService, get_magic_link_config
 from app.services.email_service import send_magic_link
+from app.services.staff_onboarding_service import apply_staff_csv_match
 from pydantic import BaseModel, EmailStr
 
 router = APIRouter()
@@ -31,6 +32,7 @@ def _token_response_for_email(db: Session, email: str) -> dict:
         full_name=None,
         institution_id=1,
     )
+    user = apply_staff_csv_match(db, user)
     if not user.is_active:
         raise HTTPException(status_code=403, detail="User inactive")
 

@@ -24,6 +24,18 @@ def get_current_user(token: str = Depends(get_token), db: Session = Depends(get_
 
 
 def require_admin(current_user=Depends(get_current_user)):
-    if current_user.role != "admin":
+    if current_user.role not in ["super_admin", "institution_admin", "admin"]:
         raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
+
+
+def require_super_admin(current_user=Depends(get_current_user)):
+    if current_user.role != "super_admin":
+        raise HTTPException(status_code=403, detail="Super Admin access required")
+    return current_user
+
+
+def require_institution_admin(current_user=Depends(get_current_user)):
+    if current_user.role not in ["super_admin", "institution_admin"]:
+        raise HTTPException(status_code=403, detail="Institution Admin access required")
     return current_user

@@ -1,6 +1,6 @@
 import os
 import uuid
-from sqlalchemy import Column, String, Boolean, DateTime
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from sqlalchemy.sql import func
 from app.database import Base, DATABASE_URL
 
@@ -23,6 +23,7 @@ class Notification(Base):
     __table_args__ = _table_args()
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    institution_id = Column(Integer, nullable=False, index=True, default=1)
     recipient_id = Column(String, nullable=False, index=True)
     event_type = Column(
         String, nullable=False

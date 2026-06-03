@@ -1,6 +1,6 @@
 import os
 import uuid
-from sqlalchemy import Column, String, DateTime, JSON
+from sqlalchemy import Column, DateTime, Integer, JSON, String
 from sqlalchemy.sql import func
 from app.database import Base, DATABASE_URL
 
@@ -23,7 +23,10 @@ class Submission(Base):
     __table_args__ = _table_args()
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    institution_id = Column(Integer, nullable=False, index=True, default=1)
     workflow_id = Column(String, nullable=False, index=True)
+    form_id = Column(String, nullable=True)
+    current_step_id = Column(String, nullable=True)
     submitted_by = Column(String, nullable=False, index=True)  # user_id from header
     form_data = Column(JSON, nullable=False, default=dict)
     status = Column(
@@ -37,6 +40,7 @@ class Task(Base):
     __table_args__ = _table_args()
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    institution_id = Column(Integer, nullable=False, index=True, default=1)
     submission_id = Column(String, nullable=False, index=True)
     assigned_role = Column(String, nullable=False, index=True)
     status = Column(String, nullable=False, default="pending")  # pending | completed
@@ -50,7 +54,9 @@ class AuditEvent(Base):
     __table_args__ = _table_args()
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    institution_id = Column(Integer, nullable=False, index=True, default=1)
     submission_id = Column(String, nullable=False, index=True)
+    step_id = Column(String, nullable=True)
     action = Column(String, nullable=False)
     actor_id = Column(String, nullable=False)
     actor_role = Column(String, nullable=True)

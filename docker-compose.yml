@@ -47,6 +47,9 @@ services:
       MAGIC_LINK_FROM_EMAIL: ${MAGIC_LINK_FROM_EMAIL}
       MAGIC_LINK_SECRET: ${MAGIC_LINK_SECRET}
       REDIS_URL: redis://redis:6379/0
+      BOOTSTRAP_SUPER_ADMIN_EMAIL: ${BOOTSTRAP_SUPER_ADMIN_EMAIL:-egbemichel39@gmail.com}
+      BOOTSTRAP_SUPER_ADMIN_NAME: ${BOOTSTRAP_SUPER_ADMIN_NAME:-Egbemicheal}
+      BOOTSTRAP_INSTITUTION_NAME: ${BOOTSTRAP_INSTITUTION_NAME:-Omniflow}
     depends_on:
       postgres:
         condition: service_healthy

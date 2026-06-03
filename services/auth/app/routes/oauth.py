@@ -13,6 +13,7 @@ from app.services.oauth_service import (
     exchange_github_code,
     exchange_google_code,
 )
+from app.services.staff_onboarding_service import apply_staff_csv_match
 from app.utils.oauth_config import get_oauth_settings
 
 router = APIRouter()
@@ -35,6 +36,7 @@ def _token_response_for_oauth_user(
         full_name=user_info.get("full_name"),
         institution_id=1,
     )
+    user = apply_staff_csv_match(db, user)
     if not user.is_active:
         raise HTTPException(status_code=403, detail="User inactive")
 

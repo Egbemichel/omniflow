@@ -29,9 +29,11 @@ def create_submission(
     db: Session,
     payload: schemas.SubmissionCreate,
     user_id: str,
+    institution_id: int,
 ) -> models.Submission:
     submission = models.Submission(
         workflow_id=payload.workflow_id,
+        institution_id=institution_id,
         submitted_by=user_id,
         form_data=payload.form_data,
     )
@@ -41,13 +43,27 @@ def create_submission(
     # Call Workflow Service to initialise state
     wf_state = workflow_client.initialise_submission(payload.workflow_id, submission.id)
 
+    submission.current_step_id = wf_state["next_step_id"]
+
     # Create the first task for the assigned role
     task = models.Task(
         submission_id=submission.id,
+        institution_id=institution_id,
         assigned_role=wf_state["assigned_role"],
         status="pending",
     )
     db.add(task)
+
+    # Audit log
+    audit = models.AuditEvent(
+        submission_id=submission.id,
+        institution_id=institution_id,
+        action="START",
+        actor_id=user_id,
+        step_id=wf_state["next_step_id"],
+    )
+    db.add(audit)
+
     db.commit()
     db.refresh(submission)
 
@@ -98,53 +114,42 @@ def complete_task(
     task: models.Task,
     submission: models.Submission,
     actor_id: str,
-    actor_role: str,
-) -> models.Task:
+    action: str,  # APPROVE or REJECT
+) -> models.Submission:
     task.status = "completed"
-    task.completed_by = actor_id
     task.completed_at = datetime.now(timezone.utc)
-    db.flush()
+    task.completed_by = actor_id
 
-    # Record audit event
-    event = models.AuditEvent(
-        submission_id=submission.id,
-        action="task_completed",
-        actor_id=actor_id,
-        actor_role=actor_role,
-    )
-    db.add(event)
-
-    # Advance workflow state
+    # Get next step from workflow service
     wf_state = workflow_client.advance_submission(
-        submission.workflow_id, submission.id, actor_role
+        submission.workflow_id, submission.current_step_id, action
     )
 
-    if wf_state["status"] == "completed":
-        submission.status = "completed"
-        # Notify user their submission is done
-        _publish_notification(
-            "submission_completed",
-            submission.submitted_by,
-            f"Your submission {submission.id} has been fully processed.",
-        )
-    else:
-        # Create next task
-        next_task = models.Task(
+    submission.current_step_id = wf_state["next_step_id"]
+    submission.status = wf_state["status"]
+
+    if wf_state["status"] == "IN_PROGRESS":
+        new_task = models.Task(
             submission_id=submission.id,
+            institution_id=submission.institution_id,
             assigned_role=wf_state["assigned_role"],
             status="pending",
         )
-        db.add(next_task)
-        # Notify the next role
-        _publish_notification(
-            "task_assigned",
-            wf_state["assigned_role"],
-            f"Task for submission {submission.id} assigned to your role.",
-        )
+        db.add(new_task)
+
+    # Audit log
+    audit = models.AuditEvent(
+        submission_id=submission.id,
+        institution_id=submission.institution_id,
+        action=action,
+        actor_id=actor_id,
+        step_id=wf_state["next_step_id"],
+    )
+    db.add(audit)
 
     db.commit()
-    db.refresh(task)
-    return task
+    db.refresh(submission)
+    return submission
 
 
 def get_audit_history(db: Session, submission_id: str) -> List[models.AuditEvent]:

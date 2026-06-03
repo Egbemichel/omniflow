@@ -20,10 +20,10 @@
       <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2 text-white bg-slate-800 rounded-apple-sm t-nav">
         <span>Dashboard</span>
       </a>
-      <a href="workflow.html" class="flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
+      <a id="nav-workflows" href="workflow.html" class="flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
         <span>Workflows</span>
       </a>
-      <a href="admin.html" class="flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
+      <a id="nav-admin" href="admin.html" class="flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
         <span>Admin</span>
       </a>
     </nav>
@@ -43,16 +43,16 @@
     <header class="mb-12 flex justify-between items-end">
       <div>
         <h1 class="t-headline">Welcome back, <span id="user-name">User</span></h1>
-        <p class="t-body text-slate-500">You have <span id="task-count">0</span> tasks requiring attention.</p>
+        <p id="task-summary" class="t-body text-slate-500">You have <span id="task-count">0</span> tasks requiring attention.</p>
       </div>
-      <button class="bg-apple-accent text-white px-6 py-2 rounded-apple-pill t-button shadow-sm hover:bg-blue-700">
+      <button id="btn-new-submission" class="bg-apple-accent text-white px-6 py-2 rounded-apple-pill t-button shadow-sm hover:bg-blue-700">
         New Submission
       </button>
     </header>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
       <!-- Task List Card -->
-      <section class="bg-white rounded-apple-lg border-hairline p-8">
+      <section id="section-tasks" class="bg-white rounded-apple-lg border-hairline p-8">
         <h2 class="t-title mb-6">Recent Tasks</h2>
         <div id="task-list" class="space-y-4">
           <p class="t-body text-slate-400 text-center py-12">No pending tasks found</p>
@@ -60,7 +60,7 @@
       </section>
 
       <!-- Submissions Card -->
-      <section class="bg-white rounded-apple-lg border-hairline p-8">
+      <section id="section-submissions" class="bg-white rounded-apple-lg border-hairline p-8">
         <h2 class="t-title mb-6">Your Submissions</h2>
         <div id="submission-list" class="space-y-4">
           <p class="t-body text-slate-400 text-center py-12">No submissions found</p>

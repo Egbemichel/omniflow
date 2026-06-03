@@ -10,6 +10,7 @@ def verify_token(response: Response, current_user=Depends(get_current_user)):
     # Set headers for Nginx auth_request_set to pick up
     response.headers["X-User-Id"] = current_user.id
     response.headers["X-User-Role"] = current_user.role
+    response.headers["X-Institution-Id"] = str(current_user.institution_id)
 
     return {
         "user_id": current_user.id,

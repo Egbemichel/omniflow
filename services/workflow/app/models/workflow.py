@@ -1,6 +1,6 @@
 import os
 import uuid
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, ForeignKey
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, JSON, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base, DATABASE_URL
@@ -29,11 +29,15 @@ class Workflow(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     institution_id = Column(Integer, nullable=False, index=True)
-    admin_id = Column(Integer, nullable=False, index=True)
+    admin_id = Column(String, nullable=False, index=True)
     name = Column(String, nullable=False)
     description = Column(String, nullable=True)
     form_id = Column(String, nullable=True)
     status = Column(String, nullable=False, default="DRAFT")
+    yaml_definition = Column(
+        JSON, nullable=True
+    )  # Stored as JSON for easier processing
+    is_published = Column(Boolean, default=False)
     locked_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(

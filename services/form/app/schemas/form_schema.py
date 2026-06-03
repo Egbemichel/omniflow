@@ -9,6 +9,7 @@ class FormStatus(str, Enum):
     processing = "PROCESSING"
     ready = "READY"
     confirmed = "CONFIRMED"
+    published = "PUBLISHED"
     failed = "FAILED"
 
 
