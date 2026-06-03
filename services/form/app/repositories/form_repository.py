@@ -86,3 +86,7 @@ class FormRepository:
             .order_by(FormField.position.asc())
             .all()
         )
+    def delete_form(self, form: Form) -> None:
+        self.session.query(FormField).filter(FormField.form_id == form.id).delete()
+        self.session.delete(form)
+        self.session.commit()

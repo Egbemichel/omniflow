@@ -82,4 +82,8 @@ def test_cross_institution_access_returns_403(admin_client, db_session, create_f
 def test_suggest_workflow_stub(admin_client, db_session, create_form):
     form = create_form(institution_id=1)
     response = admin_client.get(f"/forms/{form.id}/suggest-workflow")
-    assert response.status_code == 501
+    assert response.status_code == 200
+    data = response.json()
+    assert "steps" in data
+    assert isinstance(data["steps"], list)
+    assert len(data["steps"]) > 0
