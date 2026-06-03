@@ -2,17 +2,28 @@ import { api } from './api.js';
 import { auth } from './auth.js';
 
 async function initDashboard() {
+  auth.updateUIForRole();
   try {
+    const userPayload = auth.getUser();
+    if (!userPayload) {
+        window.location.href = 'login.html';
+        return;
+    }
+
     const user = await api.auth.me();
     if (user) {
       document.getElementById('user-name').textContent = user.email.split('@')[0];
     }
 
-    const tasks = await api.tasks.list();
-    renderTasks(tasks);
+    if (userPayload.role === 'admin' || userPayload.role === 'staff') {
+        const tasks = await api.tasks.list();
+        renderTasks(tasks);
+    }
 
-    const subs = await api.submissions.list();
-    renderSubmissions(subs);
+    if (userPayload.role === 'admin' || userPayload.role === 'end_user') {
+        const subs = await api.submissions.list();
+        renderSubmissions(subs);
+    }
 
   } catch (err) {
     console.error('Failed to load dashboard:', err);
@@ -23,23 +34,43 @@ function renderTasks(tasks) {
   const container = document.getElementById('task-list');
   if (!tasks || tasks.length === 0) {
     container.innerHTML = '<p class="t-body text-slate-400 text-center py-12">No pending tasks found</p>';
-    document.getElementById('task-count').textContent = '0';
+    if (document.getElementById('task-count')) document.getElementById('task-count').textContent = '0';
     return;
   }
 
-  document.getElementById('task-count').textContent = tasks.length;
+  if (document.getElementById('task-count')) document.getElementById('task-count').textContent = tasks.length;
   container.innerHTML = tasks.map(task => `
-    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-apple-sm border-hairline">
-      <div>
-        <p class="font-semibold text-slate-900">Task: ${task.assigned_role}</p>
-        <p class="text-xs text-slate-500">ID: ${task.id}</p>
+    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-apple-sm border-hairline transition-all hover:shadow-sm">
+      <div class="flex items-center gap-4">
+        <div class="w-10 h-10 rounded-full bg-apple-blue/10 flex items-center justify-center text-apple-blue font-bold text-xs uppercase">
+            ${task.assigned_role.substring(0,2)}
+        </div>
+        <div>
+          <p class="font-semibold text-slate-900 line-clamp-1">${task.assigned_role} Review Required</p>
+          <p class="text-[10px] text-slate-500 font-mono">SUB: ${task.submission_id.substring(0,8)}</p>
+        </div>
       </div>
-      <button onclick="window.completeTask('${task.id}')" class="text-apple-accent hover:underline text-sm font-semibold">
-        Complete
-      </button>
+      <div class="flex gap-2">
+        <button onclick="window.processTask('${task.id}', 'APPROVE')" class="bg-white border border-green-200 text-green-600 px-3 py-1.5 rounded-apple-sm hover:bg-green-50 transition-all text-xs font-semibold">
+          Approve
+        </button>
+        <button onclick="window.processTask('${task.id}', 'REJECT')" class="bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded-apple-sm hover:bg-red-50 transition-all text-xs font-semibold">
+          Reject
+        </button>
+      </div>
     </div>
   `).join('');
 }
+
+window.processTask = async (id, action) => {
+  try {
+    await api.tasks.complete(id, action);
+    initDashboard();
+  } catch (err) {
+    console.error(err);
+    alert('Failed to process task');
+  }
+};
 
 function renderSubmissions(subs) {
   const container = document.getElementById('submission-list');

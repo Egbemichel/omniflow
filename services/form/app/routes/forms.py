@@ -98,14 +98,43 @@ def update_schema(
         raise HTTPException(status_code=404, detail="Form not found")
     if form.status == "CONFIRMED":
         raise HTTPException(status_code=409, detail="Form already confirmed")
-    if form.status != "READY":
-        raise HTTPException(status_code=409, detail="Form not ready")
 
     repo.replace_fields(form_id, [field.model_dump() for field in payload.fields])
     repo.update_status(form, "CONFIRMED")
 
     fields = repo.get_fields(form_id)
     return {"form_id": form.id, "status": form.status, "fields": fields}
+
+
+@router.post("/forms/{form_id}/publish", response_model=FormStatusResponse)
+def publish_form(
+    form_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_admin),
+):
+    repo = FormRepository(db)
+    institution_id = int(current_user["institution_id"])
+    form = repo.get_form(form_id, institution_id)
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+
+    # Store fields in json_definition for the engine
+    fields = repo.get_fields(form_id)
+    json_def = {
+        "fields": [
+            {"name": f.field_name, "type": f.field_type, "required": f.required}
+            for f in fields
+        ]
+    }
+    repo.update_json_definition(form, json_def)
+    repo.publish_form(form)
+
+    return {
+        "form_id": form.id,
+        "status": form.status,
+        "field_count": len(fields),
+        "fields": fields,
+    }
 
 
 @router.get("/forms/{form_id}/suggest-workflow")

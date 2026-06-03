@@ -25,6 +25,40 @@ export const auth = {
     window.location.href = 'login.html';
   },
 
+  updateUIForRole: () => {
+    const user = auth.getUser();
+    if (!user) return;
+
+    const role = user.role || 'viewer';
+
+    const adminLinks = document.querySelectorAll('[id^="nav-admin"]');
+    const workflowLinks = document.querySelectorAll('[id^="nav-workflows"]');
+    const taskSection = document.getElementById('section-tasks');
+    const submissionSection = document.getElementById('section-submissions');
+    const newSubmissionBtn = document.getElementById('btn-new-submission');
+    const taskSummary = document.getElementById('task-summary');
+
+    // Default: hide everything sensitive
+    adminLinks.forEach(link => link.classList.add('hidden'));
+    workflowLinks.forEach(link => link.classList.add('hidden'));
+
+    if (role === 'super_admin' || role === 'institution_admin' || role === 'admin') {
+      adminLinks.forEach(link => link.classList.remove('hidden'));
+      workflowLinks.forEach(link => link.classList.remove('hidden'));
+    }
+
+    if (role === 'viewer' || role === 'staff') {
+        if (newSubmissionBtn) newSubmissionBtn.classList.add('hidden');
+    }
+
+    if (role === 'staff' || role === 'admin' || role === 'institution_admin' || role === 'super_admin') {
+      // Show task section
+      if (taskSection) taskSection.classList.remove('hidden');
+    } else {
+      if (taskSection) taskSection.classList.add('hidden');
+    }
+  },
+
   getHeaders: () => {
     const token = auth.getToken();
     const user = auth.getUser();
@@ -54,7 +88,7 @@ googleButton?.addEventListener("click", () => {
     window.location.href = url;
 });
 
-document.getElementById("btn-github").addEventListener("click", () => {
+document.getElementById("btn-github")?.addEventListener("click", () => {
     if (!window.PK_CONFIG || !window.PK_CONFIG.GITHUB_CLIENT_ID) {
         alert("GitHub login is not configured.");
         return;
@@ -68,7 +102,7 @@ document.getElementById("btn-github").addEventListener("click", () => {
     window.location.href = url;
 });
 
-document.getElementById("magic-link-form").addEventListener("submit", async (e) => {
+document.getElementById("magic-link-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const email = document.getElementById("email").value;

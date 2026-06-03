@@ -13,20 +13,23 @@
     <!-- Sidebar -->
     <aside class="w-64 bg-apple-dark flex flex-col pt-12 pb-6 px-4">
         <div class="px-2 mb-10">
-            <h2 class="t-nav text-white font-semibold">OMNIFLOW ADMIN</h2>
+            <h2 class="t-nav text-white font-semibold">OMNIFLOW</h2>
         </div>
         <nav class="flex-grow space-y-1">
             <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
                 <span>Dashboard</span>
             </a>
-            <a href="workflow.html" class="flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
+            <a id="nav-workflows" href="workflow.html" class="flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
                 <span>Workflows</span>
             </a>
-            <a href="admin.html" class="flex items-center gap-3 px-3 py-2 text-white bg-slate-800 rounded-apple-sm t-nav">
-                <span>Admin Panel</span>
+            <a id="nav-admin" href="admin.html" class="flex items-center gap-3 px-3 py-2 text-white bg-slate-800 rounded-apple-sm t-nav">
+                <span>Admin</span>
             </a>
         </nav>
-        <div class="mt-auto">
+        <div class="mt-auto space-y-1">
+            <a href="#" class="flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
+                <span>Settings</span>
+            </a>
             <button onclick="signOut()" class="w-full flex items-center gap-3 px-3 py-2 text-white opacity-60 hover:opacity-100 transition-opacity t-nav">
                 <span>Sign Out</span>
             </button>
@@ -40,20 +43,76 @@
         </header>
 
         <div class="grid grid-cols-1 gap-8">
+            <section id="section-institutions" class="bg-white rounded-apple-lg border-hairline p-8 hidden">
+                <h2 class="t-title mb-6">Institutions (Super Admin)</h2>
+                <div class="mb-4">
+                    <form id="form-create-institution" class="flex gap-4">
+                        <input type="text" id="inst-name" placeholder="Hospital/School Name" class="flex-grow rounded-apple-sm border-hairline px-4 py-2">
+                        <input type="text" id="inst-type" placeholder="Type (e.g. Healthcare)" class="w-48 rounded-apple-sm border-hairline px-4 py-2">
+                        <button type="submit" class="bg-apple-blue text-white px-6 py-2 rounded-apple-sm hover:brightness-110 transition-all">Create</button>
+                    </form>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="border-b border-slate-100">
+                                <th class="pb-4 t-caption-strong text-slate-400">ID</th>
+                                <th class="pb-4 t-caption-strong text-slate-400">Name</th>
+                                <th class="pb-4 t-caption-strong text-slate-400">Type</th>
+                                <th class="pb-4 t-caption-strong text-slate-400">Created</th>
+                                <th class="pb-4 t-caption-strong text-slate-400">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="institution-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
             <section class="bg-white rounded-apple-lg border-hairline p-8">
-                <h2 class="t-title mb-6">User Management</h2>
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="t-title">User Management</h2>
+                </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left">
                         <thead>
                             <tr class="border-b border-slate-100">
                                 <th class="pb-4 t-caption-strong text-slate-400">User</th>
                                 <th class="pb-4 t-caption-strong text-slate-400">Role</th>
-                                <th class="pb-4 t-caption-strong text-slate-400">Last Login</th>
+                                <th class="pb-4 t-caption-strong text-slate-400">ID / Institution</th>
                                 <th class="pb-4 t-caption-strong text-slate-400">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="user-table-body">
                             <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="bg-white rounded-apple-lg border-hairline p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="t-title">Imported Staff</h2>
+                    <div id="csv-upload-container">
+                        <input type="file" id="staff-csv" accept=".csv" class="hidden">
+                        <button onclick="document.getElementById('staff-csv').click()" class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-apple-sm hover:bg-slate-50 transition-all text-sm font-medium">
+                            Import Staff CSV
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="border-b border-slate-100">
+                                <th class="pb-4 t-caption-strong text-slate-400">Staff</th>
+                                <th class="pb-4 t-caption-strong text-slate-400">Role</th>
+                                <th class="pb-4 t-caption-strong text-slate-400">Department</th>
+                                <th class="pb-4 t-caption-strong text-slate-400">Status</th>
+                                <th class="pb-4 t-caption-strong text-slate-400">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staff-table-body">
+                            <!-- Imported staff rows will be loaded here -->
                         </tbody>
                     </table>
                 </div>

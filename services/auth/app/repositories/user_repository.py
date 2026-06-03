@@ -31,6 +31,10 @@ class UserRepository:
             self.session.query(User).filter(User.institution_id == institution_id).all()
         )
 
+    def list_all(self):
+        """List all users across all institutions (Super Admin)."""
+        return self.session.query(User).all()
+
     def assign_role(self, user: User, role: str) -> User:
         """Assign a new role to an existing user."""
         user.role = role

@@ -13,7 +13,7 @@ class FormRepository:
         self,
         form_id: str,
         institution_id: int,
-        admin_id: int,
+        admin_id: str,
         original_filename: str,
         file_path: str,
         mime_type: str,
@@ -29,6 +29,21 @@ class FormRepository:
             status=status,
         )
         self.session.add(form)
+        self.session.commit()
+        self.session.refresh(form)
+        return form
+
+    def update_json_definition(self, form: Form, json_definition: dict) -> Form:
+        form.json_definition = json_definition
+        form.updated_at = datetime.utcnow()
+        self.session.commit()
+        self.session.refresh(form)
+        return form
+
+    def publish_form(self, form: Form) -> Form:
+        form.is_published = True
+        form.status = "PUBLISHED"
+        form.updated_at = datetime.utcnow()
         self.session.commit()
         self.session.refresh(form)
         return form
