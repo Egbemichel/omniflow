@@ -105,6 +105,31 @@ def update_schema(
     fields = repo.get_fields(form_id)
     return {"form_id": form.id, "status": form.status, "fields": fields}
 
+@router.delete("/forms/{form_id}", status_code=204)
+def delete_form(
+    form_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_admin),
+):
+    repo = FormRepository(db)
+    institution_id = int(current_user["institution_id"])
+    form = repo.get_form(form_id, institution_id)
+    if not form:
+        other = repo.get_form_any(form_id)
+        if other:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        raise HTTPException(status_code=404, detail="Form not found")
+
+    # Delete the file from disk if it exists
+    import os
+    if form.file_path and os.path.exists(form.file_path):
+        try:
+            os.remove(form.file_path)
+        except OSError:
+            pass
+
+    repo.delete_form(form)
+    return None
 
 @router.post("/forms/{form_id}/publish", response_model=FormStatusResponse)
 def publish_form(
@@ -151,4 +176,51 @@ def suggest_workflow(
         if other:
             raise HTTPException(status_code=403, detail="Forbidden")
         raise HTTPException(status_code=404, detail="Form not found")
-    raise HTTPException(status_code=501, detail="Workflow suggestion coming soon")
+    if form.status not in {"READY", "CONFIRMED"}:
+        raise HTTPException(
+            status_code=409,
+            detail="Form must be READY or CONFIRMED before a workflow can be suggested",
+        )
+
+    fields = repo.get_fields(form_id)
+    field_names = [f.field_name.lower() for f in fields]
+
+    # Keyword maps to roles
+    role_keywords = {
+        "nurse": ["nurse", "triage", "vital", "temperature", "blood pressure", "weight", "height"],
+        "doctor": ["doctor", "physician", "diagnosis", "prescription", "medical", "treatment", "clinical"],
+        "pharmacist": ["pharmacist", "medication", "drug", "dosage", "pharmacy"],
+        "admin": ["admin", "signature", "approval", "authorisation", "authorization", "sign off", "director"],
+    }
+
+    # Find which roles are relevant based on field names
+    matched_roles = []
+    for role, keywords in role_keywords.items():
+        for field_name in field_names:
+            if any(keyword in field_name for keyword in keywords):
+                if role not in matched_roles:
+                    matched_roles.append(role)
+                break
+
+    # Always end with admin sign-off if not already there
+    if not matched_roles:
+        matched_roles = ["staff", "admin"]
+    elif "admin" not in matched_roles:
+        matched_roles.append("admin")
+
+    # Build suggested steps
+    suggested_steps = [
+        {
+            "order": idx + 1,
+            "name": f"{role.capitalize()} Review",
+            "assigned_role": role,
+        }
+        for idx, role in enumerate(matched_roles)
+    ]
+
+    return {
+        "form_id": form_id,
+        "suggested_workflow_name": f"{form.original_filename.rsplit('.', 1)[0].replace('_', ' ').title()} Workflow",
+        "steps": suggested_steps,
+        "note": "This is a suggestion based on field names. Review and adjust before creating the workflow.",
+    }
