@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Workflow Builder — OmniFlow</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <script src="js/tailwind-config.js"></script>
+</head>
+<body>
+<div class="pk-wf-app">
+
+  <!-- ── Top bar ──────────────────────────────────────────── -->
+  <header class="pk-wf-topbar">
+    <button id="wf-back" class="pk-wf-back">
+      <i data-lucide="arrow-left" style="width:16px;height:16px"></i> Back
+    </button>
+    <input id="wf-name" class="pk-wf-name-input" placeholder="Untitled workflow" autocomplete="off">
+    <label class="pk-wf-form-link">
+      <span class="t-fine" style="color:var(--text-muted);text-transform:uppercase;font-weight:600">Form</span>
+      <select id="wf-form-select" class="pk-wf-form-select"></select>
+    </label>
+    <span id="wf-status-badge" class="pk-badge pk-badge-neutral">DRAFT</span>
+    <div style="margin-left:auto;display:flex;gap:0.75rem;align-items:center">
+      <span id="wf-save-state" class="t-caption" style="color:var(--text-muted)"></span>
+      <button id="wf-save" class="pk-btn-secondary">Save as Draft</button>
+      <button id="wf-publish" class="pk-btn-primary">Publish</button>
+    </div>
+  </header>
+
+  <div class="pk-wf-body">
+
+    <!-- ── Shape palette ──────────────────────────────────── -->
+    <aside class="pk-wf-palette">
+      <p class="pk-wf-palette-title">Shapes</p>
+      <div class="pk-wf-palette-item" draggable="true" data-shape="start">
+        <span class="pk-wf-palette-glyph"><i data-lucide="circle" style="width:18px;height:18px"></i></span> Start
+      </div>
+      <div class="pk-wf-palette-item" draggable="true" data-shape="entry">
+        <span class="pk-wf-palette-glyph"><i data-lucide="person-standing" style="width:18px;height:18px"></i></span> Entry User
+      </div>
+      <div class="pk-wf-palette-item" draggable="true" data-shape="actor">
+        <span class="pk-wf-palette-glyph"><i data-lucide="square" style="width:18px;height:18px"></i></span> Actor Step
+      </div>
+      <div class="pk-wf-palette-item" draggable="true" data-shape="condition">
+        <span class="pk-wf-palette-glyph"><i data-lucide="diamond" style="width:18px;height:18px"></i></span> Condition
+      </div>
+      <div class="pk-wf-palette-item" draggable="true" data-shape="end">
+        <span class="pk-wf-palette-glyph"><i data-lucide="octagon" style="width:18px;height:18px"></i></span> End
+      </div>
+
+      <p class="pk-wf-palette-title" style="margin-top:1.5rem">Connecting</p>
+      <p class="t-fine" style="color:var(--text-muted);line-height:1.6">
+        Hover a node and drag its blue dot onto another node to draw an arrow.
+        Click an arrow to label it (<strong>Yes/No</strong> for a condition's branches)
+        or delete it.
+      </p>
+
+      <p class="pk-wf-palette-title" style="margin-top:1.25rem">Loops &amp; jumps</p>
+      <p class="t-fine" style="color:var(--text-muted);line-height:1.6">
+        There is no loop or jump shape. Build a loop by drawing an arrow
+        <em>back</em> to an earlier step from a condition's "repeat" branch; its other
+        branch is the exit. A jump is simply an arrow to any target node.
+      </p>
+
+      <p class="pk-wf-palette-title" style="margin-top:1.25rem">Rules</p>
+      <p class="t-fine" style="color:var(--text-muted);line-height:1.6">
+        One Start, one Entry User, one End per workflow. A linked form is required
+        before saving.
+      </p>
+    </aside>
+
+    <!-- ── Canvas ─────────────────────────────────────────── -->
+    <div class="pk-wf-canvas-wrap">
+      <div id="wf-canvas" class="pk-wf-canvas">
+        <svg id="wf-edges" class="pk-wf-edges">
+          <defs>
+            <marker id="wf-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text-muted)"></path>
+            </marker>
+          </defs>
+        </svg>
+        <!-- nodes injected here -->
+      </div>
+
+      <!-- Zoom controls (drag empty canvas to pan; Ctrl/⌘ + wheel to zoom) -->
+      <div class="pk-wf-zoom">
+        <button id="wf-zoom-out" class="pk-wf-zoom-btn" title="Zoom out">−</button>
+        <button id="wf-zoom-reset" class="pk-wf-zoom-btn pk-wf-zoom-level" title="Reset view"><span id="wf-zoom-level">100%</span></button>
+        <button id="wf-zoom-in" class="pk-wf-zoom-btn" title="Zoom in">+</button>
+      </div>
+    </div>
+
+    <!-- ── Properties panel ───────────────────────────────── -->
+    <aside class="pk-wf-props">
+      <div id="wf-props-body">
+        <p class="pk-wf-props-empty">Select a node to edit its properties.</p>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<script type="module" src="js/workflow-builder.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => lucide.createIcons());</script>
+</body>
+</html>

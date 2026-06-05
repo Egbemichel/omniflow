@@ -41,7 +41,9 @@ def _token_response_for_email(db: Session, email: str) -> dict:
             "sub": user.id,
             "email": user.email,
             "role": user.role,
+            "actor_type": user.actor_type,
             "institution_id": user.institution_id,
+            "full_name": user.full_name,
         }
     )
     return {"access_token": token_jwt, "token_type": "bearer"}

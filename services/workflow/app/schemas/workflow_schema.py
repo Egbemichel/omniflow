@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -44,12 +44,17 @@ class WorkflowCreate(BaseModel):
     description: Optional[str] = None
     form_id: Optional[str] = None
     steps: Optional[List[StepCreate]] = None
+    graph: Optional[Dict[str, Any]] = None
 
 
 class WorkflowUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1)
     description: Optional[str] = None
     form_id: Optional[str] = None
+    graph: Optional[Dict[str, Any]] = None
+    # When provided on a DRAFT workflow, the step list is replaced wholesale —
+    # this is how the builder re-syncs the flattened steps after edits.
+    steps: Optional[List[StepCreate]] = None
 
 
 class WorkflowDetailResponse(BaseModel):
@@ -60,6 +65,7 @@ class WorkflowDetailResponse(BaseModel):
     status: WorkflowStatus
     locked_at: Optional[datetime]
     steps: List[StepOut]
+    graph: Optional[Dict[str, Any]] = None
 
     model_config = {"from_attributes": True}
 

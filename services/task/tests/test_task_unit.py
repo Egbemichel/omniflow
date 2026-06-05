@@ -139,6 +139,95 @@ class TestTaskCompletion:
         assert response.status_code == 404
 
 
+class TestFormIdResolution:
+    """Public form submissions arrive with a form_id; the workflow is resolved."""
+
+    def test_form_id_resolves_published_workflow(self, client, end_user_headers):
+        from unittest.mock import patch
+
+        with (
+            patch("app.services.workflow_client.find_workflow_for_form") as mfind,
+            patch("app.services.workflow_client.initialise_submission") as minit,
+        ):
+            mfind.return_value = "wf-resolved"
+            minit.return_value = {
+                "next_step_id": "n1",
+                "assigned_role": "staff",
+                "actor_type": None,
+                "status": "IN_PROGRESS",
+            }
+            resp = client.post(
+                "/submissions",
+                json={"form_id": "form-1", "form_data": {"a": "b"}},
+                headers=end_user_headers,
+            )
+        assert resp.status_code == 201
+        mfind.assert_called_once_with("form-1")
+        assert resp.json()["workflow_id"] == "wf-resolved"
+
+    def test_form_id_without_published_workflow_returns_422(
+        self, client, end_user_headers
+    ):
+        from unittest.mock import patch
+
+        with patch("app.services.workflow_client.find_workflow_for_form") as mfind:
+            mfind.return_value = None
+            resp = client.post(
+                "/submissions",
+                json={"form_id": "no-workflow", "form_data": {}},
+                headers=end_user_headers,
+            )
+        assert resp.status_code == 422
+
+
+class TestActorTypeRouting:
+    """Graph-driven workflows route tasks by actor type, not the broad role."""
+
+    def _submit_with_actor_type(self, client, end_user_headers, actor_type):
+        from unittest.mock import patch
+
+        with patch("app.services.workflow_client.initialise_submission") as m:
+            m.return_value = {
+                "next_step_id": "node-1",
+                "assigned_role": "staff",
+                "actor_type": actor_type,
+                "status": "IN_PROGRESS",
+            }
+            resp = client.post(
+                "/submissions",
+                json={"workflow_id": "wf-graph", "form_data": {}},
+                headers=end_user_headers,
+            )
+        assert resp.status_code == 201
+        return resp.json()
+
+    def test_matching_actor_type_sees_task(self, client, end_user_headers):
+        self._submit_with_actor_type(client, end_user_headers, "Triage Nurse")
+        inbox = client.get(
+            "/tasks/inbox",
+            headers={
+                "X-User-Id": "s1",
+                "X-User-Role": "staff",
+                "X-Actor-Type": "Triage Nurse",
+            },
+        )
+        body = inbox.json()
+        assert len(body) == 1
+        assert body[0]["actor_type"] == "Triage Nurse"
+
+    def test_other_actor_type_does_not_see_task(self, client, end_user_headers):
+        self._submit_with_actor_type(client, end_user_headers, "Triage Nurse")
+        inbox = client.get(
+            "/tasks/inbox",
+            headers={
+                "X-User-Id": "s2",
+                "X-User-Role": "staff",
+                "X-Actor-Type": "Blood Lab",
+            },
+        )
+        assert inbox.json() == []
+
+
 class TestTaskHealth:
     def test_health_check_returns_200(self, client):
         assert client.get("/health").status_code == 200

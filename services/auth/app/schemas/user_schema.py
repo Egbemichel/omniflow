@@ -8,6 +8,7 @@ class UserResponse(BaseModel):
     email: EmailStr
     full_name: Optional[str]
     role: str
+    actor_type: Optional[str] = None
     institution_id: int
     is_active: bool
     oauth_provider: Optional[str]
@@ -24,4 +25,5 @@ class RoleAssign(BaseModel):
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     role: Optional[str] = None
+    actor_type: Optional[str] = None
     is_active: Optional[bool] = None

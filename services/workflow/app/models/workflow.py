@@ -37,6 +37,10 @@ class Workflow(Base):
     yaml_definition = Column(
         JSON, nullable=True
     )  # Stored as JSON for easier processing
+    # Authoring source of truth: the full canvas graph (nodes, edges, formId,
+    # branch labels, back-edges). The runtime engine uses the flattened `steps`;
+    # `graph` exists so the builder can round-trip the diagram across devices.
+    graph = Column(JSON, nullable=True)
     is_published = Column(Boolean, default=False)
     locked_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

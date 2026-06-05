@@ -53,4 +53,6 @@ class FormField(Base):
     field_type = Column(String, nullable=False, default="text")
     required = Column(Boolean, nullable=False, default=False)
     position = Column(Integer, nullable=False)
+    # Choices for select/radio/checkbox-group fields; null for free-text inputs.
+    options = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -5,9 +5,23 @@ In production it calls the real workflow service URL.
 """
 
 import os
+from typing import Optional
+
 import httpx
 
 WORKFLOW_SERVICE_URL = os.getenv("WORKFLOW_SERVICE_URL", "http://localhost:8003")
+
+
+def find_workflow_for_form(form_id: str) -> Optional[str]:
+    """Resolve the published workflow linked to a form, or None if there isn't one."""
+    response = httpx.get(
+        f"{WORKFLOW_SERVICE_URL}/workflows/by-form/{form_id}",
+        timeout=10,
+    )
+    if response.status_code == 404:
+        return None
+    response.raise_for_status()
+    return response.json().get("workflow_id")
 
 
 def initialise_submission(workflow_id: str, submission_id: str) -> dict:

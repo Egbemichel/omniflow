@@ -26,12 +26,13 @@ def test_upload_happy_path(admin_client, db_session, upload_dir, monkeypatch):
 
     published = {}
 
-    def fake_publish(self, form_id, institution_id, admin_id, field_count):
+    def fake_publish(self, form_id, institution_id, admin_id, field_count, status="completed"):
         published["payload"] = {
             "form_id": form_id,
             "institution_id": institution_id,
             "admin_id": admin_id,
             "field_count": field_count,
+            "status": status,
         }
 
     monkeypatch.setattr(
@@ -56,6 +57,7 @@ def test_upload_happy_path(admin_client, db_session, upload_dir, monkeypatch):
     fields = repo.get_fields(form_id)
     assert len(fields) == 2
     assert published["payload"]["field_count"] == 2
+    assert published["payload"]["status"] == "completed"
 
 
 def test_upload_rejects_unsupported_type(admin_client, upload_dir):
@@ -86,8 +88,11 @@ def test_upload_ocr_failure_sets_failed_status(admin_client, db_session, upload_
     def fake_extract_failure(self, file_path):
         raise RuntimeError("OCR engine crashed")
 
-    def fake_publish(self, form_id, institution_id, admin_id, field_count):
-        pass
+    published = {}
+
+    def fake_publish(self, form_id, institution_id, admin_id, field_count, status="completed"):
+        published["status"] = status
+        published["field_count"] = field_count
 
     monkeypatch.setattr(
         "app.services.ocr_service.OCRService.extract_fields", fake_extract_failure
@@ -106,3 +111,6 @@ def test_upload_ocr_failure_sets_failed_status(admin_client, db_session, upload_
     status_response = admin_client.get(f"/forms/{form_id}/status")
     assert status_response.status_code == 200
     assert status_response.json()["status"] == "FAILED"
+    # ocr.completed is published with status "failed" on failure
+    assert published["status"] == "failed"
+    assert published["field_count"] == 0

@@ -29,11 +29,15 @@ def upgrade() -> None:
         "workflows",
         sa.Column("id", sa.String(), primary_key=True, server_default=id_default),
         sa.Column("institution_id", sa.Integer(), nullable=False),
-        sa.Column("admin_id", sa.Integer(), nullable=False),
+        sa.Column("admin_id", sa.String(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("description", sa.String(), nullable=True),
         sa.Column("form_id", sa.String(), nullable=True),
         sa.Column("status", sa.String(), nullable=False, server_default="DRAFT"),
+        sa.Column("yaml_definition", sa.JSON(), nullable=True),
+        sa.Column(
+            "is_published", sa.Boolean(), nullable=True, server_default=sa.text("false")
+        ),
         sa.Column("locked_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=now_default),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=now_default),

@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session
 from app.models.form import Form, FormField
+from app.models.submission import FormFieldValue, FormSubmission
 
 
 class FormRepository:
@@ -87,6 +88,7 @@ class FormRepository:
                 field_type=field.get("field_type", "text"),
                 required=field.get("required", False),
                 position=field.get("position", 0),
+                options=field.get("options"),
             )
             for field in fields
         ]
@@ -105,3 +107,60 @@ class FormRepository:
         self.session.query(FormField).filter(FormField.form_id == form.id).delete()
         self.session.delete(form)
         self.session.commit()
+
+    def create_submission(
+        self,
+        form_id: str,
+        institution_id: int,
+        submitter_id: str,
+        field_values: List[dict],
+    ) -> FormSubmission:
+        submission = FormSubmission(
+            form_id=form_id,
+            institution_id=institution_id,
+            submitter_id=submitter_id,
+        )
+        self.session.add(submission)
+        # Flush so the submission's UUID default is assigned before we reference
+        # submission.id on the child field-value rows (otherwise it is still None).
+        self.session.flush()
+        for fv in field_values:
+            self.session.add(
+                FormFieldValue(
+                    submission_id=submission.id,
+                    field_id=fv.get("field_id"),
+                    field_name=fv["field_name"],
+                    value=fv.get("value"),
+                )
+            )
+        self.session.commit()
+        self.session.refresh(submission)
+        return submission
+
+    def get_submission(
+        self, submission_id: str, institution_id: int
+    ) -> Optional[FormSubmission]:
+        return (
+            self.session.query(FormSubmission)
+            .filter(
+                FormSubmission.id == submission_id,
+                FormSubmission.institution_id == institution_id,
+            )
+            .first()
+        )
+
+    def list_submissions(
+        self, form_id: str, institution_id: int, page: int, page_size: int
+    ) -> Tuple[int, List[FormSubmission]]:
+        query = self.session.query(FormSubmission).filter(
+            FormSubmission.form_id == form_id,
+            FormSubmission.institution_id == institution_id,
+        )
+        total = query.count()
+        items = (
+            query.order_by(FormSubmission.submitted_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+            .all()
+        )
+        return total, items

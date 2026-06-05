@@ -45,7 +45,9 @@ def _token_response_for_oauth_user(
             "sub": user.id,
             "email": user.email,
             "role": user.role,
+            "actor_type": user.actor_type,
             "institution_id": user.institution_id,
+            "full_name": user.full_name,
         }
     )
     return {"access_token": token, "token_type": "bearer"}

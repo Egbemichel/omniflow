@@ -1,4 +1,32 @@
+import os
+
 from app.repositories.form_repository import FormRepository
+
+
+def test_file_preview_returns_uploaded_file(admin_client, db_session, create_form):
+    form = create_form(status="READY")
+    with open(form.file_path, "wb") as fh:
+        fh.write(b"%PDF-1.4 fake pdf bytes")
+
+    try:
+        response = admin_client.get(f"/forms/{form.id}/file")
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("application/pdf")
+        assert response.content == b"%PDF-1.4 fake pdf bytes"
+    finally:
+        os.remove(form.file_path)
+
+
+def test_file_preview_missing_file_returns_404(admin_client, create_form):
+    form = create_form(status="READY")  # file_path points at a non-existent file
+    response = admin_client.get(f"/forms/{form.id}/file")
+    assert response.status_code == 404
+
+
+def test_file_preview_cross_institution_forbidden(other_inst_client, create_form):
+    form = create_form(institution_id=1, status="READY")
+    response = other_inst_client.get(f"/forms/{form.id}/file")
+    assert response.status_code == 403
 
 
 def test_status_ready_returns_fields(admin_client, db_session, create_form):

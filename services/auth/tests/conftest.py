@@ -75,8 +75,10 @@ def setup_db():
     # Don't call Base.metadata.create_all() — Alembic handles it
     app.dependency_overrides[get_db] = override_get_db
     yield
-    # Cleanup: drop all tables after session
-    Base.metadata.drop_all(bind=engine)
+    # Only drop tables on the local SQLite fast-path. NEVER drop the shared
+    # Postgres schema — Alembic owns it, and dropping it breaks the running stack.
+    if engine.dialect.name == "sqlite":
+        Base.metadata.drop_all(bind=engine)
     engine.dispose()
     db_file = Path("test_auth.db")
     if db_file.exists():

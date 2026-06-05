@@ -1,4 +1,7 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.repositories.form_repository import FormRepository
@@ -121,7 +124,6 @@ def delete_form(
         raise HTTPException(status_code=404, detail="Form not found")
 
     # Delete the file from disk if it exists
-    import os
     if form.file_path and os.path.exists(form.file_path):
         try:
             os.remove(form.file_path)
@@ -130,6 +132,34 @@ def delete_form(
 
     repo.delete_form(form)
     return None
+
+
+@router.get("/forms/{form_id}/file")
+def get_form_file(
+    form_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_admin),
+):
+    """Serve the originally uploaded file so the admin can preview it.
+
+    Institution-scoped; the file is streamed inline with its stored mime type.
+    """
+    repo = FormRepository(db)
+    institution_id = int(current_user["institution_id"])
+    form = repo.get_form(form_id, institution_id)
+    if not form:
+        other = repo.get_form_any(form_id)
+        if other:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        raise HTTPException(status_code=404, detail="Form not found")
+    if not form.file_path or not os.path.exists(form.file_path):
+        raise HTTPException(status_code=404, detail="Uploaded file not found")
+
+    return FileResponse(
+        form.file_path,
+        media_type=form.mime_type or "application/octet-stream",
+        content_disposition_type="inline",
+    )
 
 @router.post("/forms/{form_id}/publish", response_model=FormStatusResponse)
 def publish_form(

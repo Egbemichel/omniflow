@@ -2,7 +2,7 @@ from app.services.jwt_service import create_access_token
 
 
 def test_verify_valid_token_returns_user_info(client, db_session, create_user):
-    user = create_user(db_session, email="verify@pk.com")
+    user = create_user(db_session, email="verify@pk.com", full_name="Verify User")
     token = create_access_token(
         {
             "sub": user.id,
@@ -18,6 +18,7 @@ def test_verify_valid_token_returns_user_info(client, db_session, create_user):
     assert data["email"] == user.email
     assert data["role"] == user.role
     assert data["institution_id"] == user.institution_id
+    assert data["full_name"] == "Verify User"
 
 
 def test_verify_invalid_token_returns_401(client):

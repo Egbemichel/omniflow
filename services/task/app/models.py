@@ -43,6 +43,9 @@ class Task(Base):
     institution_id = Column(Integer, nullable=False, index=True, default=1)
     submission_id = Column(String, nullable=False, index=True)
     assigned_role = Column(String, nullable=False, index=True)
+    # The graph's actor type (e.g. "Triage Nurse"). When set, the inbox routes by
+    # this rather than the broad system role — all actor types map to `staff`.
+    actor_type = Column(String, nullable=True, index=True)
     status = Column(String, nullable=False, default="pending")  # pending | completed
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     completed_at = Column(DateTime(timezone=True), nullable=True)

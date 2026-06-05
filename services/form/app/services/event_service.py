@@ -12,7 +12,12 @@ class EventService:
         )
 
     def publish_ocr_completed(
-        self, form_id: str, institution_id: int, admin_id: int, field_count: int
+        self,
+        form_id: str,
+        institution_id: int,
+        admin_id: int,
+        field_count: int,
+        status: str = "completed",
     ) -> None:
         payload = {
             "event": "ocr.completed",
@@ -20,6 +25,7 @@ class EventService:
             "institution_id": institution_id,
             "admin_id": admin_id,
             "field_count": field_count,
+            "status": status,
         }
         self.redis.publish("events", json.dumps(payload))
 
