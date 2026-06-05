@@ -1,38 +1,317 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OmniFlow — Workflow Digitization</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/main.css">
-  <script src="js/tailwind-config.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>OmniFlow — Workflow Digitization Platform</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Existing OmniFlow Styles -->
+    <link rel="stylesheet" href="css/main.css">
+
+    <!-- Existing OmniFlow Tailwind Config -->
+    <script src="js/tailwind-config.js"></script>
 </head>
-<body class="bg-apple-base min-h-screen flex flex-col">
-  <header class="h-12 bg-apple-dark flex items-center px-6 justify-between">
-    <div class="t-nav text-white font-semibold">OmniFlow</div>
-    <nav class="flex gap-6">
-      <a href="#" class="t-nav text-white opacity-80 hover:opacity-100">Product</a>
-      <a href="#" class="t-nav text-white opacity-80 hover:opacity-100">Features</a>
-      <a href="login.html" class="t-nav text-white opacity-80 hover:opacity-100">Sign In</a>
-    </nav>
-  </header>
 
-  <main class="flex-grow flex flex-col items-center justify-center p-6 text-center">
-    <h1 class="t-display mb-4">Digitize your workflow<br><span class="text-apple-accent">in minutes.</span></h1>
-    <p class="t-body-lg text-slate-500 max-w-xl mb-8">
-      Omni Flow helps institutions move from physical forms and manual handoffs to a structured,
-      automated digital flow.
-    </p>
-    <div class="flex gap-4">
-      <a href="login.html" class="bg-apple-accent text-white px-8 py-3 rounded-apple-pill t-button hover:bg-blue-700 transition-colors">Get Started</a>
-      <a href="#" class="bg-white border border-slate-200 px-8 py-3 rounded-apple-pill t-button hover:bg-slate-50 transition-colors">Documentation</a>
-    </div>
-  </main>
+<body class="bg-apple-base text-slate-900">
 
-  <footer class="p-8 border-t border-slate-200 text-center">
-    <p class="t-fine text-slate-400">&copy; 2026 OmniFlow. All rights reserved.</p>
-  </footer>
+    <!-- NAVIGATION -->
+    <header class="bg-apple-dark h-14 flex items-center justify-between px-8">
+
+        <div class="text-white font-semibold text-lg">
+            OmniFlow
+        </div>
+
+        <nav class="hidden md:flex gap-8 items-center">
+
+            <a href="#features"
+               class="text-white opacity-80 hover:opacity-100">
+                Features
+            </a>
+
+            <a href="#workflow"
+               class="text-white opacity-80 hover:opacity-100">
+                Workflow
+            </a>
+
+            <a href="about.html"
+               class="text-white opacity-80 hover:opacity-100">
+                About
+            </a>
+
+            <a href="login.html"
+               class="bg-apple-accent text-white px-5 py-2 rounded-apple-pill">
+                Sign In
+            </a>
+
+        </nav>
+
+    </header>
+
+    <!-- HERO SECTION -->
+    <section class="py-24 px-6">
+
+        <div class="max-w-6xl mx-auto text-center">
+
+            <p class="text-blue-600 font-semibold mb-4">
+                Workflow Automation Platform
+            </p>
+
+            <h1 class="text-6xl md:text-7xl font-bold mb-6">
+                Digitize your workflow
+                <br>
+                <span class="text-blue-600">
+                    in minutes.
+                </span>
+            </h1>
+
+            <p class="text-xl text-slate-500 max-w-3xl mx-auto mb-10">
+                OmniFlow helps organizations digitize forms,
+                automate approvals, assign tasks and track
+                workflow progress from start to finish.
+            </p>
+
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+
+                <a href="login.html"
+                   class="bg-apple-accent text-white px-8 py-4 rounded-apple-pill hover:bg-blue-700 transition">
+                    Get Started
+                </a>
+
+                <a href="about.html"
+                   class="bg-white border border-slate-200 px-8 py-4 rounded-apple-pill hover:bg-slate-50 transition">
+                    Learn More
+                </a>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- WORKFLOW PREVIEW -->
+    <section class="pb-20 px-6">
+
+        <div class="max-w-6xl mx-auto bg-white rounded-apple-xl shadow-sm p-10">
+
+            <div class="grid md:grid-cols-5 gap-8 text-center">
+
+                <div>
+                    <div class="text-5xl mb-3">📄</div>
+                    <h3 class="font-semibold">Forms</h3>
+                </div>
+
+                <div>
+                    <div class="text-5xl mb-3">⚙️</div>
+                    <h3 class="font-semibold">Workflow</h3>
+                </div>
+
+                <div>
+                    <div class="text-5xl mb-3">👥</div>
+                    <h3 class="font-semibold">Assignment</h3>
+                </div>
+
+                <div>
+                    <div class="text-5xl mb-3">📊</div>
+                    <h3 class="font-semibold">Tracking</h3>
+                </div>
+
+                <div>
+                    <div class="text-5xl mb-3">🔔</div>
+                    <h3 class="font-semibold">Notifications</h3>
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features" class="py-24 bg-white">
+
+        <div class="max-w-6xl mx-auto px-6">
+
+            <div class="text-center mb-14">
+
+                <h2 class="text-5xl font-bold mb-4">
+                    Powerful Features
+                </h2>
+
+                <p class="text-slate-500 text-lg">
+                    Everything needed to digitize and automate institutional workflows.
+                </p>
+
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+
+                <div class="p-8 rounded-apple-xl shadow-sm border bg-white">
+
+                    <div class="text-4xl mb-4">📄</div>
+
+                    <h3 class="text-xl font-semibold mb-3">
+                        Digital Forms
+                    </h3>
+
+                    <p class="text-slate-500">
+                        Upload and manage forms digitally.
+                    </p>
+
+                </div>
+
+                <div class="p-8 rounded-apple-xl shadow-sm border bg-white">
+
+                    <div class="text-4xl mb-4">⚡</div>
+
+                    <h3 class="text-xl font-semibold mb-3">
+                        Workflow Automation
+                    </h3>
+
+                    <p class="text-slate-500">
+                        Automate approval processes.
+                    </p>
+
+                </div>
+
+                <div class="p-8 rounded-apple-xl shadow-sm border bg-white">
+
+                    <div class="text-4xl mb-4">📈</div>
+
+                    <h3 class="text-xl font-semibold mb-3">
+                        Analytics
+                    </h3>
+
+                    <p class="text-slate-500">
+                        Monitor workflow performance.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section id="workflow" class="py-24">
+
+        <div class="max-w-6xl mx-auto px-6">
+
+            <h2 class="text-5xl font-bold text-center mb-16">
+                How OmniFlow Works
+            </h2>
+
+            <div class="grid md:grid-cols-4 gap-10 text-center">
+
+                <div>
+                    <div class="text-blue-600 text-5xl font-bold mb-4">1</div>
+                    <h3 class="font-semibold">Upload Forms</h3>
+                </div>
+
+                <div>
+                    <div class="text-blue-600 text-5xl font-bold mb-4">2</div>
+                    <h3 class="font-semibold">Create Workflow</h3>
+                </div>
+
+                <div>
+                    <div class="text-blue-600 text-5xl font-bold mb-4">3</div>
+                    <h3 class="font-semibold">Assign Tasks</h3>
+                </div>
+
+                <div>
+                    <div class="text-blue-600 text-5xl font-bold mb-4">4</div>
+                    <h3 class="font-semibold">Track Progress</h3>
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- STATS -->
+    <section class="bg-apple-dark text-white py-20">
+
+        <div class="max-w-6xl mx-auto px-6">
+
+            <div class="grid md:grid-cols-4 gap-8 text-center">
+
+                <div>
+                    <h3 class="text-5xl font-bold">99.9%</h3>
+                    <p>Reliability</p>
+                </div>
+
+                <div>
+                    <h3 class="text-5xl font-bold">24/7</h3>
+                    <p>Availability</p>
+                </div>
+
+                <div>
+                    <h3 class="text-5xl font-bold">50%</h3>
+                    <p>Faster Approvals</p>
+                </div>
+
+                <div>
+                    <h3 class="text-5xl font-bold">100%</h3>
+                    <p>Digital Process</p>
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- CTA -->
+    <section class="py-24 px-6">
+
+        <div class="max-w-4xl mx-auto text-center">
+
+            <h2 class="text-5xl font-bold mb-6">
+                Ready to Transform Your Institution?
+            </h2>
+
+            <p class="text-xl text-slate-500 mb-10">
+                Join organizations using OmniFlow to automate workflows and improve efficiency.
+            </p>
+
+            <a href="login.html"
+               class="bg-apple-accent text-white px-10 py-4 rounded-apple-pill">
+                Start Today
+            </a>
+
+        </div>
+
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-apple-dark text-white py-10">
+
+        <div class="max-w-6xl mx-auto text-center px-6">
+
+            <h3 class="text-2xl font-semibold mb-3">
+                OmniFlow
+            </h3>
+
+            <p class="text-slate-400 mb-4">
+                Workflow Automation & Digital Transformation Platform
+            </p>
+
+            <p class="text-slate-500">
+                © 2026 OmniFlow. All rights reserved.
+            </p>
+
+        </div>
+
+    </footer>
+
 </body>
 </html>
