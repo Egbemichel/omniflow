@@ -1,0 +1,22 @@
+# Base image for CID/CD Python tests
+FROM python:3.12-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Pre-install common testing dependencies
+RUN pip install --no-cache-dir \
+    pytest \
+    pytest-asyncio \
+    pytest-cov \
+    pytest-mock \
+    httpx \
+    alembic \
+    ruff \
+    bandit \
+    pip-audit
+
+# Set default working directory
+WORKDIR /app
