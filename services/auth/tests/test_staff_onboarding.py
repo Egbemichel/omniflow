@@ -133,6 +133,56 @@ def test_login_matching_staff_csv_sets_role_and_institution(
     assert row.matched_user_id == user.id
 
 
+def test_login_custom_actor_type_maps_to_staff_role(
+    client, db_session, create_user, monkeypatch
+):
+    """A custom CSV role_label (e.g. "NURSE") is an actor type, not a system role.
+
+    The user's system role must be "staff" and the label must be stored as the
+    actor_type — never leaked into the system-role field.
+    """
+    admin = create_user(
+        db_session,
+        email="admin@hospital.com",
+        role="institution_admin",
+        institution_id=42,
+    )
+    csv_content = (
+        "name,email,role,department\n"
+        "Nurse Joy,joy@hospital.com,NURSE,Pediatrics\n"
+    )
+    upload = client.post(
+        "/admin/institutions/42/staff/upload",
+        headers=_auth_header(admin),
+        files={"file": ("staff.csv", csv_content, "text/csv")},
+    )
+    assert upload.status_code == 200
+
+    monkeypatch.setattr(
+        "app.routes.oauth.exchange_google_code",
+        lambda *a, **kw: {
+            "email": "joy@hospital.com",
+            "oauth_id": "google-joy",
+            "full_name": "Nurse Joy",
+        },
+    )
+
+    response = client.post(
+        "/auth/google",
+        json={"code": "test", "redirect_uri": "https://app/callback"},
+    )
+
+    assert response.status_code == 200
+    payload = decode_token(response.json()["access_token"])
+    assert payload["role"] == "staff"
+    assert payload["actor_type"] == "NURSE"
+
+    repo = UserRepository(db_session)
+    user = repo.get_by_email("joy@hospital.com")
+    assert user.role == "staff"
+    assert user.actor_type == "NURSE"
+
+
 def test_staff_rows_cannot_cross_institution(client, db_session, create_user):
     admin = create_user(
         db_session,

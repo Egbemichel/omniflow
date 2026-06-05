@@ -30,11 +30,15 @@ def upgrade() -> None:
         "forms",
         sa.Column("id", sa.String(), primary_key=True, server_default=id_default),
         sa.Column("institution_id", sa.Integer(), nullable=False),
-        sa.Column("admin_id", sa.Integer(), nullable=False),
+        sa.Column("admin_id", sa.String(), nullable=False),
         sa.Column("original_filename", sa.String(), nullable=False),
         sa.Column("file_path", sa.String(), nullable=False),
         sa.Column("mime_type", sa.String(), nullable=False),
         sa.Column("status", sa.String(), nullable=False, server_default="UPLOADED"),
+        sa.Column("json_definition", sa.JSON(), nullable=True),
+        sa.Column(
+            "is_published", sa.Boolean(), nullable=True, server_default=sa.text("false")
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=now_default),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=now_default),
     )

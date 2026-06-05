@@ -61,8 +61,12 @@ services:
     environment:
       DATABASE_URL: postgresql://pk_user:pk_password@postgres:5432/pk_user
       DATABASE_SCHEMA: form_schema
+      AUTH_SERVICE_URL: http://auth:8001
+      TASK_SERVICE_URL: http://task:8004
       REDIS_URL: redis://redis:6379/0
       UPLOAD_DIR: /uploads
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
     volumes:
       - uploads:/uploads
     depends_on:
@@ -70,6 +74,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      auth:
+        condition: service_started
 
   workflow:
     build: ./services/workflow
@@ -78,10 +84,13 @@ services:
     environment:
       DATABASE_URL: postgresql://pk_user:pk_password@postgres:5432/pk_user
       DATABASE_SCHEMA: workflow_schema
+      AUTH_SERVICE_URL: http://auth:8001
       REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy
+      auth:
+        condition: service_started
 
   task:
     build: ./services/task
@@ -105,12 +114,15 @@ services:
     environment:
       DATABASE_URL: postgresql://pk_user:pk_password@postgres:5432/pk_user
       DATABASE_SCHEMA: notification_schema
+      AUTH_SERVICE_URL: http://auth:8001
       REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      auth:
+        condition: service_started
 
   frontend:
     build: ./frontend

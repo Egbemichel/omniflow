@@ -28,7 +28,7 @@ def _get_workflow_or_403(
     raise HTTPException(status_code=404, detail="Workflow not found")
 
 
-@router.post("/workflows/", response_model=WorkflowDetailResponse, status_code=201)
+@router.post("/workflows", response_model=WorkflowDetailResponse, status_code=201)
 def create_workflow(
     payload: WorkflowCreate,
     db: Session = Depends(get_db),
@@ -52,11 +52,12 @@ def create_workflow(
     workflow = repo.create_workflow(
         workflow_id=workflow_id,
         institution_id=int(current_user["institution_id"]),
-        admin_id=int(current_user["id"]),
+        admin_id=current_user["user_id"],
         name=payload.name,
         description=payload.description,
         form_id=payload.form_id,
         steps=steps_data,
+        graph=payload.graph,
     )
     return workflow
 
@@ -74,13 +75,45 @@ def update_workflow(
     )
     if workflow.status != "DRAFT":
         raise HTTPException(status_code=409, detail="Workflow is immutable")
-    updates = payload.model_dump(exclude_unset=True)
-    if not updates:
-        return workflow
-    return repo.update_workflow(workflow, updates)
+
+    # Step replacement is handled separately from plain column updates.
+    column_updates = payload.model_dump(exclude_unset=True, exclude={"steps"})
+    if column_updates:
+        repo.update_workflow(workflow, column_updates)
+
+    if payload.steps is not None:
+        steps_data = [
+            {
+                "step_name": s.step_name,
+                "assigned_role": s.assigned_role.value,
+                "step_order": s.step_order,
+                "is_terminal": s.is_terminal,
+            }
+            for s in payload.steps
+        ]
+        repo.replace_steps(workflow.id, steps_data)
+        db.refresh(workflow)
+
+    return workflow
 
 
-@router.get("/workflows/", response_model=WorkflowListResponse)
+@router.get("/workflows/by-form/{form_id}")
+def get_workflow_for_form(form_id: str, db: Session = Depends(get_db)):
+    """Resolve the published workflow linked to a form.
+
+    Called server-to-server by the Task Service when a public form submission
+    needs to kick off its workflow. No auth — internal, looked up by form id.
+    """
+    repo = WorkflowRepository(db)
+    workflow = repo.get_published_workflow_by_form(form_id)
+    if not workflow:
+        raise HTTPException(
+            status_code=404, detail="No published workflow linked to this form"
+        )
+    return {"workflow_id": workflow.id, "status": workflow.status}
+
+
+@router.get("/workflows", response_model=WorkflowListResponse)
 def list_workflows(
     db: Session = Depends(get_db),
     current_user: dict = Depends(require_admin),

@@ -14,6 +14,7 @@ if str(_SERVICE_ROOT) not in sys.path:
 
 from app.database import Base  # noqa: E402
 from app.models.form import Form, FormField  # noqa: F401, E402
+from app.models.submission import FormFieldValue, FormSubmission  # noqa: F401, E402
 
 config = context.config
 

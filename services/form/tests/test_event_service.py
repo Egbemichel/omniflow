@@ -24,3 +24,16 @@ def test_publish_ocr_completed():
     data = json.loads(payload)
     assert data["event"] == "ocr.completed"
     assert data["field_count"] == 3
+    # status defaults to "completed" on success
+    assert data["status"] == "completed"
+
+
+def test_publish_ocr_completed_failed_status():
+    fake = FakeRedis()
+    service = EventService(redis_client=fake)
+    service.publish_ocr_completed("form-id", 1, 10, 0, status="failed")
+
+    _, payload = fake.published[0]
+    data = json.loads(payload)
+    assert data["status"] == "failed"
+    assert data["field_count"] == 0

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Submit Form — OmniFlow</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <script src="/js/tailwind-config.js"></script>
+</head>
+<body style="background-color:var(--bg-base);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:3rem 1.5rem">
+
+  <header class="w-full mb-8 flex justify-between items-center" style="max-width:512px">
+    <span class="t-nav" style="color:var(--text-muted);font-weight:600;letter-spacing:0.05em">OMNIFLOW</span>
+  </header>
+
+  <!-- Error panel -->
+  <div id="error-panel" class="pk-card hidden text-center" style="max-width:512px;width:100%">
+    <p class="t-title mb-2" style="color:var(--text-primary)">Unable to load form</p>
+    <p id="error-msg" class="t-body" style="color:var(--text-muted)"></p>
+    <p class="t-caption mt-4" style="color:var(--text-muted)">Please scan the QR code again or contact the institution.</p>
+  </div>
+
+  <!-- Form fill panel -->
+  <div id="form-panel" class="pk-card hidden" style="max-width:512px;width:100%">
+    <h1 id="form-name" class="t-headline mb-2" style="color:var(--text-primary)">Loading form…</h1>
+    <p class="t-caption mb-8" style="color:var(--text-muted)">Fields marked <span style="color:var(--state-error)">*</span> are required.</p>
+
+    <form id="submit-form" novalidate>
+      <div id="form-fields" class="space-y-5"></div>
+      <button type="submit" id="submit-btn" class="pk-btn-primary w-full mt-8">Submit</button>
+    </form>
+  </div>
+
+  <!-- Success / status panel -->
+  <div id="status-panel" class="pk-card hidden text-center" style="max-width:512px;width:100%">
+    <div style="width:64px;height:64px;border-radius:9999px;background-color:rgba(52,199,89,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem">
+      <i data-lucide="check" style="width:32px;height:32px;color:var(--state-success)"></i>
+    </div>
+    <h2 class="t-headline mb-2" style="color:var(--text-primary)">Submission received</h2>
+    <p class="t-body mb-6" style="color:var(--text-muted)">Your form has been submitted and is now being processed.</p>
+    <div style="background-color:var(--bg-base);border-radius:8px;border:1px solid var(--border-default);padding:1rem 1.5rem;display:inline-block">
+      <p class="t-caption mb-1" style="color:var(--text-muted)">Reference number</p>
+      <p id="submission-ref" class="t-mono" style="color:var(--text-primary);font-size:21px;font-weight:600;letter-spacing:0.1em">—</p>
+    </div>
+    <p class="t-fine mt-6" style="color:var(--text-muted)">Keep this reference number for your records.</p>
+  </div>
+
+  <script type="module" src="/js/end_user.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => lucide.createIcons());</script>
+</body>
+</html>

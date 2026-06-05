@@ -1,132 +1,52 @@
-/**
- * Simple Auth state management for OmniFlow
- */
-
 export const auth = {
-  getToken: () => localStorage.getItem('of_token'),
-  saveToken: (token) => localStorage.setItem('of_token', token),
-  clearToken: () => localStorage.removeItem('of_token'),
+  getToken: () => sessionStorage.getItem('of_token'),
+  saveToken: (token) => sessionStorage.setItem('of_token', token),
+  clearToken: () => sessionStorage.removeItem('of_token'),
 
   getUser: () => {
     const token = auth.getToken();
     if (!token) return null;
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload;
-    } catch (e) {
+      // JWT uses base64url; convert to standard base64 + restore padding
+      const b64url = token.split('.')[1] || '';
+      const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = b64.length % 4;
+      const padded = pad ? b64 + '='.repeat(4 - pad) : b64;
+      return JSON.parse(atob(padded));
+    } catch {
       return null;
     }
   },
 
-  isAuthenticated: () => !!auth.getToken(),
+  // True only when token exists AND is not yet expired
+  isAuthenticated: () => {
+    const user = auth.getUser();
+    if (!user) return false;
+    const now = Math.floor(Date.now() / 1000);
+    return !user.exp || user.exp > now;
+  },
+
+  getDisplayName: () => {
+    const user = auth.getUser();
+    if (!user) return 'User';
+    const fullName = (user.full_name || '').trim();
+    if (fullName) return fullName;
+    if (user.email) return user.email.split('@')[0];
+    return 'User';
+  },
 
   logout: () => {
     auth.clearToken();
     window.location.href = 'login.html';
   },
 
-  updateUIForRole: () => {
-    const user = auth.getUser();
-    if (!user) return;
-
-    const role = user.role || 'viewer';
-
-    const adminLinks = document.querySelectorAll('[id^="nav-admin"]');
-    const workflowLinks = document.querySelectorAll('[id^="nav-workflows"]');
-    const taskSection = document.getElementById('section-tasks');
-    const submissionSection = document.getElementById('section-submissions');
-    const newSubmissionBtn = document.getElementById('btn-new-submission');
-    const taskSummary = document.getElementById('task-summary');
-
-    // Default: hide everything sensitive
-    adminLinks.forEach(link => link.classList.add('hidden'));
-    workflowLinks.forEach(link => link.classList.add('hidden'));
-
-    if (role === 'super_admin' || role === 'institution_admin' || role === 'admin') {
-      adminLinks.forEach(link => link.classList.remove('hidden'));
-      workflowLinks.forEach(link => link.classList.remove('hidden'));
-    }
-
-    if (role === 'viewer' || role === 'staff') {
-        if (newSubmissionBtn) newSubmissionBtn.classList.add('hidden');
-    }
-
-    if (role === 'staff' || role === 'admin' || role === 'institution_admin' || role === 'super_admin') {
-      // Show task section
-      if (taskSection) taskSection.classList.remove('hidden');
-    } else {
-      if (taskSection) taskSection.classList.add('hidden');
-    }
-  },
-
   getHeaders: () => {
     const token = auth.getToken();
     const user = auth.getUser();
     return {
-      'Authorization': `Bearer ${token}`,
+      'Authorization': `Bearer ${token || ''}`,
       'X-User-Id': user?.sub || '',
       'X-User-Role': user?.role || ''
     };
   }
 };
-
-const googleButton = document.getElementById("btn-google");
-
-googleButton?.addEventListener("click", () => {
-    console.log("clicked, config:", window.PK_CONFIG);
-
-    if (!window.PK_CONFIG || !window.PK_CONFIG.GOOGLE_CLIENT_ID) {
-        alert("Google login is not configured.");
-        return;
-    }
-
-    const clientId = window.PK_CONFIG.GOOGLE_CLIENT_ID;
-    const configuredRedirectUri = window.PK_CONFIG.GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/oauth/google/callback`;
-    const redirectUri = encodeURIComponent(configuredRedirectUri);
-    const scope = encodeURIComponent("email profile");
-    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
-    window.location.href = url;
-});
-
-document.getElementById("btn-github")?.addEventListener("click", () => {
-    if (!window.PK_CONFIG || !window.PK_CONFIG.GITHUB_CLIENT_ID) {
-        alert("GitHub login is not configured.");
-        return;
-    }
-
-    const clientId = window.PK_CONFIG.GITHUB_CLIENT_ID;
-    const configuredRedirectUri = window.PK_CONFIG.GITHUB_REDIRECT_URI || `${window.location.origin}/auth/oauth/github/callback`;
-    const redirectUri = encodeURIComponent(configuredRedirectUri);
-    const scope = encodeURIComponent("user:email");
-    const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
-    window.location.href = url;
-});
-
-document.getElementById("magic-link-form")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const email = document.getElementById("email").value;
-    if (!email) return;
-
-    const btn = e.target.querySelector("button[type=submit]");
-    btn.textContent = "Sending...";
-    btn.disabled = true;
-
-    try {
-        const resp = await fetch("/api/auth/magic-link/request", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email }),
-        });
-
-        if (resp.ok) {
-            btn.textContent = "Check your email!";
-        } else {
-            btn.textContent = "Something went wrong. Try again.";
-            btn.disabled = false;
-        }
-    } catch (err) {
-        btn.textContent = "Something went wrong. Try again.";
-        btn.disabled = false;
-    }
-});

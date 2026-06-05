@@ -35,5 +35,10 @@ context/
 
 # AGENTS
 AGENTS.md
+ClAUDE.md
+CLAUDE.local.md
+.claude/*
+progress-tracker.md
+.agents/*
 
 frontend/config.js

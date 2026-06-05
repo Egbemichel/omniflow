@@ -7,8 +7,15 @@
     const params = new URLSearchParams(hash);
     const token = params.get("token");
     if (token) {
-        localStorage.setItem("of_token", token);  // was pk_token, now matches auth.js
-        window.location.href = "/dashboard.html";
+        sessionStorage.setItem("of_token", token);
+        let role = '';
+        try {
+            const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+            role = JSON.parse(atob(b64)).role || '';
+        } catch {}
+        if (role === 'admin' || role === 'super_admin') window.location.href = '/admin.html';
+        else if (role === 'staff') window.location.href = '/staff.html';
+        else window.location.href = '/dashboard.html';
     } else {
         window.location.href = "/login.html?error=oauth_failed";
     }
