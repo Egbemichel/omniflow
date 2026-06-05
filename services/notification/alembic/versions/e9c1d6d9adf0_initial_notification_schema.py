@@ -28,6 +28,9 @@ def upgrade() -> None:
     op.create_table(
         "notifications",
         sa.Column("id", sa.String(), nullable=False),
+        sa.Column(
+            "institution_id", sa.Integer(), nullable=False, server_default=sa.text("1")
+        ),
         sa.Column("recipient_id", sa.String(), nullable=False),
         sa.Column("event_type", sa.String(), nullable=False),
         sa.Column("message", sa.String(), nullable=False),

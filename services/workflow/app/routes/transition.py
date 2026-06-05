@@ -18,6 +18,7 @@ class TransitionResponse(BaseModel):
     next_step_id: Optional[str]
     status: str
     assigned_role: Optional[str]
+    actor_type: Optional[str] = None
     message: Optional[str] = None
 
 
@@ -26,7 +27,8 @@ def transition_workflow(
     workflow_id: str, request: TransitionRequest, db: Session = Depends(get_db)
 ):
     repo = WorkflowRepository(db)
-    workflow = repo.get_workflow(workflow_id)
+    # The Task Service calls this without institution context; look up by id only.
+    workflow = repo.get_workflow_any(workflow_id)
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
 

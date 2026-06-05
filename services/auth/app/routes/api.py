@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from app.routes import (
+    actor_types,
     admin,
     magic_link,
     oauth,
@@ -15,6 +16,7 @@ router.include_router(magic_link.router, prefix="/auth")
 router.include_router(passkeys.router)
 router.include_router(verify.router)
 router.include_router(admin.router)
+router.include_router(actor_types.router)
 router.include_router(institution.router)
 router.include_router(onboarding.router)
 router.include_router(onboarding.admin_router)

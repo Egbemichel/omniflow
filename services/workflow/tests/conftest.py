@@ -54,12 +54,22 @@ def override_get_db():
 
 
 # ---------------------------------------------------------------------------
-# User stubs
+# User stubs — keys mirror the real Auth /verify payload (user_id is a UUID str).
 # ---------------------------------------------------------------------------
-ADMIN_USER = {"id": 1, "email": "admin@test.com", "role": "admin", "institution_id": 1}
-STAFF_USER = {"id": 2, "email": "staff@test.com", "role": "staff", "institution_id": 1}
+ADMIN_USER = {
+    "user_id": "admin-1",
+    "email": "admin@test.com",
+    "role": "admin",
+    "institution_id": 1,
+}
+STAFF_USER = {
+    "user_id": "staff-2",
+    "email": "staff@test.com",
+    "role": "staff",
+    "institution_id": 1,
+}
 OTHER_INST_USER = {
-    "id": 3,
+    "user_id": "admin-3",
     "email": "other@test.com",
     "role": "admin",
     "institution_id": 2,

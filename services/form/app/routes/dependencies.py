@@ -27,7 +27,10 @@ def get_current_user(  # pragma: no cover
     return payload
 
 
+ADMIN_ROLES = {"super_admin", "institution_admin", "admin"}
+
+
 def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
-    if current_user.get("role") != "admin":
+    if current_user.get("role") not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Admin access required")
     return current_user

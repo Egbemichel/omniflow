@@ -18,6 +18,8 @@ class FormFieldInput(BaseModel):
     field_type: str = Field(default="text")
     required: bool = False
     position: int = Field(ge=0)
+    # Choices for select/radio/checkbox-group fields; null/empty for free text.
+    options: Optional[List[str]] = None
 
 
 class FormFieldOut(FormFieldInput):
@@ -61,3 +63,48 @@ class FormListResponse(BaseModel):
     page_size: int
     total: int
     items: List[FormListItem]
+
+
+# ---------------------------------------------------------------------------
+# Submission schemas
+# ---------------------------------------------------------------------------
+
+
+class FieldValueInput(BaseModel):
+    field_id: Optional[str] = None
+    field_name: str = Field(min_length=1)
+    value: Optional[str] = None
+
+
+class SubmitFormRequest(BaseModel):
+    submitter_id: Optional[str] = None
+    field_values: List[FieldValueInput] = []
+
+
+class SubmissionResponse(BaseModel):
+    submission_id: str
+    form_id: str
+    status: str
+
+
+class SubmissionItem(BaseModel):
+    submission_id: str
+    form_id: str
+    submitter_id: str
+    status: str
+    submitted_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class SubmissionListResponse(BaseModel):
+    page: int
+    page_size: int
+    total: int
+    items: List[SubmissionItem]
+
+
+class QRCodeResponse(BaseModel):
+    form_id: str
+    url: str
+    qr_code_base64: str

@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, EmailStr
 
 
@@ -23,4 +25,6 @@ class TokenVerifyResponse(BaseModel):
     user_id: str
     email: EmailStr
     role: str
+    actor_type: Optional[str] = None
     institution_id: int
+    full_name: Optional[str] = None

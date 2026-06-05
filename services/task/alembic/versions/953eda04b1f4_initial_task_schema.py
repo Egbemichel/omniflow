@@ -29,7 +29,11 @@ def upgrade() -> None:
     op.create_table(
         "audit_events",
         sa.Column("id", sa.String(), nullable=False),
+        sa.Column(
+            "institution_id", sa.Integer(), nullable=False, server_default=sa.text("1")
+        ),
         sa.Column("submission_id", sa.String(), nullable=False),
+        sa.Column("step_id", sa.String(), nullable=True),
         sa.Column("action", sa.String(), nullable=False),
         sa.Column("actor_id", sa.String(), nullable=False),
         sa.Column("actor_role", sa.String(), nullable=True),
@@ -50,7 +54,12 @@ def upgrade() -> None:
     op.create_table(
         "submissions",
         sa.Column("id", sa.String(), nullable=False),
+        sa.Column(
+            "institution_id", sa.Integer(), nullable=False, server_default=sa.text("1")
+        ),
         sa.Column("workflow_id", sa.String(), nullable=False),
+        sa.Column("form_id", sa.String(), nullable=True),
+        sa.Column("current_step_id", sa.String(), nullable=True),
         sa.Column("submitted_by", sa.String(), nullable=False),
         sa.Column("form_data", sa.JSON(), nullable=False),
         sa.Column("status", sa.String(), nullable=False),
@@ -74,6 +83,9 @@ def upgrade() -> None:
     op.create_table(
         "tasks",
         sa.Column("id", sa.String(), nullable=False),
+        sa.Column(
+            "institution_id", sa.Integer(), nullable=False, server_default=sa.text("1")
+        ),
         sa.Column("submission_id", sa.String(), nullable=False),
         sa.Column("assigned_role", sa.String(), nullable=False),
         sa.Column("status", sa.String(), nullable=False),

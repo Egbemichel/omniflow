@@ -72,16 +72,16 @@ def mock_workflow_service():
         patch("app.services.workflow_client.advance_submission") as mock_advance,
     ):
         mock_init.return_value = {
-            "submission_id": "sub-001",
-            "current_step": 1,
+            "next_step_id": "step-1",
             "assigned_role": "nurse",
-            "status": "in_progress",
+            "actor_type": None,
+            "status": "IN_PROGRESS",
         }
         mock_advance.return_value = {
-            "submission_id": "sub-001",
-            "current_step": 2,
+            "next_step_id": "step-2",
             "assigned_role": "doctor",
-            "status": "in_progress",
+            "actor_type": None,
+            "status": "IN_PROGRESS",
         }
         yield {"init": mock_init, "advance": mock_advance}
 

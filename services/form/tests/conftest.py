@@ -34,6 +34,7 @@ os.environ.setdefault("MAX_FILE_SIZE_MB", "20")
 from app.database import Base, get_db  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models.form import Form, FormField  # noqa: F401, E402
+from app.models.submission import FormFieldValue, FormSubmission  # noqa: F401, E402
 from app.repositories.form_repository import FormRepository  # noqa: E402
 from app.routes.dependencies import get_current_user  # noqa: E402
 
@@ -171,6 +172,18 @@ def other_inst_client():
 # ---------------------------------------------------------------------------
 # Form factory
 # ---------------------------------------------------------------------------
+@pytest.fixture(autouse=True)
+def mock_task_client(monkeypatch):
+    """Stub the Task Service call so public-submit tests stay isolated."""
+    from unittest.mock import MagicMock
+
+    mock = MagicMock(return_value=None)
+    monkeypatch.setattr(
+        "app.routes.submissions.task_client.start_workflow_submission", mock
+    )
+    return mock
+
+
 @pytest.fixture
 def create_form(db_session):
     def _create(

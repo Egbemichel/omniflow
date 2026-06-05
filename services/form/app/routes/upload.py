@@ -69,12 +69,13 @@ def _save_upload_file(
             out_file.write(chunk)
 
 
-def _run_ocr(form_id: str, file_path: str, institution_id: int, admin_id: int) -> None:
+def _run_ocr(form_id: str, file_path: str, institution_id: int, admin_id: str) -> None:
     db = SessionLocal()
     repo = FormRepository(db)
     ocr_service = OCRService()
     event_service = EventService()
     field_count = 0
+    status = "failed"
     try:
         form = repo.get_form_any(form_id)
         if not form:
@@ -82,14 +83,16 @@ def _run_ocr(form_id: str, file_path: str, institution_id: int, admin_id: int) -
         fields = ocr_service.extract_fields(file_path)
         field_count = repo.replace_fields(form_id, fields)
         repo.update_status(form, "READY")
+        status = "completed"
     except Exception:
+        # Includes OCRError after the stricter-prompt retry was exhausted.
         form = repo.get_form_any(form_id)
         if form:
             repo.update_status(form, "FAILED")
     finally:
         try:
             event_service.publish_ocr_completed(
-                form_id, institution_id, admin_id, field_count
+                form_id, institution_id, admin_id, field_count, status=status
             )
         finally:
             db.close()
@@ -108,7 +111,7 @@ async def upload_form(
 
     form_id = str(uuid.uuid4())
     institution_id = int(current_user["institution_id"])
-    admin_id = int(current_user["user_id"])
+    admin_id = current_user["user_id"]  # auth user ids are UUID strings, not ints
 
     upload_dir = os.path.join(_upload_root(), str(institution_id))
     os.makedirs(upload_dir, exist_ok=True)

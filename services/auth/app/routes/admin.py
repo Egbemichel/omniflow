@@ -56,6 +56,8 @@ def update_user(
         user.full_name = payload.full_name
     if payload.role is not None:
         user.role = payload.role
+    if "actor_type" in payload.model_fields_set:
+        user.actor_type = payload.actor_type
     if payload.is_active is not None:
         user.is_active = payload.is_active
 
