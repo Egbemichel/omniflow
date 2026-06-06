@@ -119,22 +119,35 @@ pipeline {
                             redis:7-alpine
 
                         echo "Waiting for postgres..."
-                        for i in $(seq 1 15); do
-                            docker exec pk-postgres-${BUILD_NUMBER} pg_isready -U pk_user && break || true
+                        READY=0
+                        for i in $(seq 1 30); do
+                            if docker exec pk-postgres-${BUILD_NUMBER} pg_isready -U pk_user; then
+                                echo "Postgres is ready!"
+                                READY=1
+                                break
+                            fi
+                            echo "Waiting... ($i/30)"
                             sleep 2
                         done
-                    '''
 
-                    def services = ['auth', 'form', 'workflow', 'task', 'notification']
-                    def testTasks = [:]
+                        if [ $READY -ne 1 ]; then
+                            echo "ERROR: Postgres failed to become ready in time."
+                            docker logs pk-postgres-${BUILD_NUMBER}
+                            exit 1
+                        fi
+                    '''
 
                     services.each { svc ->
                         testTasks[svc] = {
+                            // Small staggered delay to avoid thundering herd on Docker network/DB
+                            def delay = services.indexOf(svc) * 5
+                            echo "Waiting ${delay}s before starting ${svc} tests..."
+                            sleep delay
+
                             echo "====== Testing ${svc} (Parallel) ======"
                             sh """
                                 docker run --rm \
                                     --network ${CI_NETWORK} \
-                                    --dns=8.8.8.8 --dns=1.1.1.1 \
                                     -v ${WORKSPACE}:${WORKSPACE} \
                                     -w ${WORKSPACE}/services/${svc} \
                                     -e DATABASE_URL=postgresql://pk_user:pk_password@pk-postgres-${BUILD_NUMBER}:5432/paper_killer_test \
@@ -145,7 +158,7 @@ pipeline {
                                     -e JWT_EXPIRE_MINUTES=60 \
                                     ${TEST_BASE_IMG} \
                                     sh -c "
-                                        pip install --no-index --find-links=/wheels -r requirements.txt --quiet &&
+                                        pip install --no-index --find-links=/wheels -r requirements.txt --quiet --root-user-action=ignore &&
                                         PYTHONPATH=.:../.. alembic upgrade head &&
                                         PYTHONPATH=.:../.. pytest tests/ -v \
                                             --cov=app \
