@@ -145,7 +145,7 @@ pipeline {
                                     -e JWT_EXPIRE_MINUTES=60 \
                                     ${TEST_BASE_IMG} \
                                     sh -c "
-                                        pip install -r requirements.txt --quiet --no-cache-dir &&
+                                        pip install --no-index --find-links=/wheels -r requirements.txt --quiet &&
                                         PYTHONPATH=.:../.. alembic upgrade head &&
                                         PYTHONPATH=.:../.. pytest tests/ -v \
                                             --cov=app \

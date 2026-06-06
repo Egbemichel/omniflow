@@ -18,5 +18,33 @@ RUN pip install --no-cache-dir \
     bandit \
     pip-audit
 
+# ── Offline wheelhouse ───────────────────────────────────────────────────
+# The CI bridge network has no internet egress (the Jenkins host is a
+# kube-router k8s node that default-drops forwarded traffic). This image is
+# built with --network=host, which DOES have egress, so we build wheels for
+# every service's deps here. The Tests stage then installs them offline with
+# `pip install --no-index --find-links=/wheels`, needing zero network.
+#
+# `pip wheel` (not `pip download`) builds any sdists into wheels now, so the
+# offline install never has to compile anything. Each service's requirements
+# are wheeled separately so differing version pins don't conflict.
+COPY services/auth/requirements.txt          /tmp/req/auth.txt
+COPY services/form/requirements.txt          /tmp/req/form.txt
+COPY services/workflow/requirements.txt      /tmp/req/workflow.txt
+COPY services/task/requirements.txt          /tmp/req/task.txt
+COPY services/notification/requirements.txt  /tmp/req/notification.txt
+# All services pin identical versions for shared packages (no conflicts), so
+# the union is wheeled in a SINGLE resolution pass — each unique package is
+# fetched/built once instead of 5x. Per-service offline installs then resolve
+# their exact pins from this shared wheelhouse.
+RUN mkdir -p /wheels \
+    && pip wheel --wheel-dir /wheels \
+        -r /tmp/req/auth.txt \
+        -r /tmp/req/form.txt \
+        -r /tmp/req/workflow.txt \
+        -r /tmp/req/task.txt \
+        -r /tmp/req/notification.txt \
+    && rm -rf /tmp/req
+
 # Set default working directory
 WORKDIR /app
