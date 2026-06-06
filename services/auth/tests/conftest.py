@@ -5,10 +5,13 @@ import sys
 import uuid
 from pathlib import Path
 
+from typing import Optional
+
 import pytest
+from fastapi import Header, HTTPException, Depends
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 # ---------------------------------------------------------------------------
 # Path bootstrap — must happen before ANY local imports.
@@ -65,6 +68,51 @@ def override_get_db():
 
 
 # ---------------------------------------------------------------------------
+# Dependency Overrides for Testing
+# ---------------------------------------------------------------------------
+from app.routes.dependencies import get_current_user
+
+
+async def mock_get_current_user(
+    authorization: Optional[str] = Header(None),
+    x_user_role: str = Header(None, alias="X-User-Role"),
+    x_institution_id: str = Header(None, alias="X-Institution-Id"),
+    x_user_id: str = Header(None, alias="X-User-Id"),
+    db: Session = Depends(get_db),
+):
+    """
+    Override for get_current_user that allows using X- Headers for testing
+    WHILE STILL supporting standard Bearer tokens for verify tests.
+    """
+    if x_user_role:
+
+        class MockUser:
+            def __init__(self, role, institution_id, id_):
+                self.role = role
+                self.institution_id = int(institution_id) if institution_id else 1
+                self.id = id_ or "mock-user-id"
+                self.is_active = True
+                self.email = "mock@example.com"
+                self.actor_type = None
+
+        return MockUser(x_user_role, x_institution_id, x_user_id)
+
+    if authorization and authorization.startswith("Bearer "):
+        from app.services.jwt_service import decode_token
+        from app.repositories.user_repository import UserRepository
+
+        token = authorization.split(" ", 1)[1]
+        payload = decode_token(token)
+        if payload:
+            repo = UserRepository(db)
+            user = repo.get_by_id(payload.get("sub"))
+            if user and user.is_active:
+                return user
+
+    raise HTTPException(status_code=401, detail="Not authenticated")
+
+
+# ---------------------------------------------------------------------------
 # Session-scoped DB setup / teardown
 # ---------------------------------------------------------------------------
 @pytest.fixture(scope="session", autouse=True)
@@ -74,6 +122,7 @@ def setup_db():
     """
     # Don't call Base.metadata.create_all() — Alembic handles it
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
     yield
     # Only drop tables on the local SQLite fast-path. NEVER drop the shared
     # Postgres schema — Alembic owns it, and dropping it breaks the running stack.
