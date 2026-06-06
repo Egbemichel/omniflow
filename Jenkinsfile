@@ -115,13 +115,14 @@ pipeline {
 
                         docker run -d \
                             --name pk-redis-${BUILD_NUMBER} \
-                            --network ${CI_NETWORK} \
+                            --network container:pk-postgres-${BUILD_NUMBER} \
                             redis:7-alpine
 
-                        echo "Waiting for postgres..."
+                        echo "Waiting for postgres (via loopback)..."
                         READY=0
                         for i in $(seq 1 30); do
-                            if docker exec pk-postgres-${BUILD_NUMBER} pg_isready -U pk_user; then
+                            # Checking via localhost inside the container stack forces TCP check
+                            if docker exec pk-postgres-${BUILD_NUMBER} pg_isready -h localhost -U pk_user; then
                                 echo "Postgres is ready!"
                                 READY=1
                                 break
@@ -151,12 +152,12 @@ pipeline {
                             echo "====== Testing ${serviceName} (Parallel) ======"
                             sh """
                                 docker run --rm \
-                                    --network ${CI_NETWORK} \
+                                    --network container:pk-postgres-${BUILD_NUMBER} \
                                     -v ${WORKSPACE}:${WORKSPACE} \
                                     -w ${WORKSPACE}/services/${serviceName} \
-                                    -e DATABASE_URL=postgresql://pk_user:pk_password@pk-postgres-${BUILD_NUMBER}:5432/paper_killer_test \
+                                    -e DATABASE_URL=postgresql://pk_user:pk_password@localhost:5432/paper_killer_test \
                                     -e DATABASE_SCHEMA=${serviceName}_schema \
-                                    -e REDIS_URL=redis://pk-redis-${BUILD_NUMBER}:6379/0 \
+                                    -e REDIS_URL=redis://localhost:6379/0 \
                                     -e JWT_SECRET=test_secret_key_not_for_production \
                                     -e JWT_ALGORITHM=HS256 \
                                     -e JWT_EXPIRE_MINUTES=60 \
