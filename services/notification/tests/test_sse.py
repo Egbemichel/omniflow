@@ -1,4 +1,3 @@
-import json
 import pytest
 from app.sse import _frame, _ui_events, _authenticate
 from unittest.mock import AsyncMock, patch

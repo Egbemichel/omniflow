@@ -1,5 +1,3 @@
-import pytest
-
 def test_get_all_submissions_as_staff(client, created_submission):
     headers = {"X-User-Id": "staff-1", "X-User-Role": "staff", "X-Institution-Id": "1"}
     response = client.get("/submissions", headers=headers)
