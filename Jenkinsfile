@@ -53,7 +53,9 @@ pipeline {
                 docker {
                     image "${TEST_BASE_IMG}"
                     reuseNode true
-                    args '-u root'
+                    // --dns bypasses the broken internal resolver so pip-audit can
+                    // reach PyPI; without it pip-audit hangs until the stage timeout.
+                    args '-u root --dns=8.8.8.8 --dns=1.1.1.1'
                 }
             }
             steps {
@@ -219,7 +221,8 @@ pipeline {
                 docker {
                     image 'bitnami/kubectl:latest'
                     reuseNode true
-                    args '-u root'
+                    // --dns so kubectl can resolve the cluster API server hostname
+                    args '-u root --dns=8.8.8.8 --dns=1.1.1.1'
                 }
             }
             environment {
