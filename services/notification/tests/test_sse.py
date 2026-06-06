@@ -1,4 +1,5 @@
 import pytest
+import httpx
 from app.sse import _frame, _ui_events, _authenticate
 from unittest.mock import AsyncMock, patch
 
@@ -80,3 +81,56 @@ async def test_authenticate_fail():
 async def test_authenticate_empty():
     user = await _authenticate("")
     assert user is None
+
+
+@pytest.mark.asyncio
+async def test_authenticate_request_error():
+    with patch("httpx.AsyncClient.get", side_effect=httpx.RequestError("error")):
+        user = await _authenticate("token")
+        assert user is None
+
+
+def test_ui_events_workflow_published():
+    user = {"institution_id": 1, "user_id": "u1", "role": "admin"}
+    payload = {"institution_id": 1, "event": "workflow.published", "foo": "bar"}
+    events = _ui_events("events", payload, user)
+    assert events == [("workflow.updated", payload)]
+
+
+@pytest.mark.asyncio
+async def test_sse_endpoint_authorized(client):
+    # Mock authentication to return a valid user
+    with patch("app.sse._authenticate", new_callable=AsyncMock) as mock_auth:
+        mock_auth.return_value = {"institution_id": 1, "user_id": "u1", "role": "admin"}
+        
+        # Mock Redis
+        with patch("redis.asyncio.from_url") as mock_redis_url:
+            mock_redis = AsyncMock()
+            mock_redis_url.return_value = mock_redis
+            mock_pubsub = AsyncMock()
+            mock_redis.pubsub.return_value = mock_pubsub
+            
+            # Setup pubsub.get_message to return one message then None (to test loop)
+            mock_pubsub.get_message.side_effect = [
+                {"channel": "events", "data": '{"institution_id": 1, "event": "ocr.completed"}'},
+                None
+            ]
+            
+            # Use request.is_disconnected to exit the loop
+            with patch("fastapi.Request.is_disconnected", side_effect=[False, False, True]):
+                response = client.get("/events?token=valid")
+                assert response.status_code == 200
+                assert response.headers["content-type"] == "text/event-stream"
+                
+                # Check that it connected
+                content = b"".join(response.iter_bytes())
+                assert b": connected" in content
+                assert b"event: form.updated" in content
+
+
+@pytest.mark.asyncio
+async def test_sse_endpoint_unauthorized(client):
+    with patch("app.sse._authenticate", new_callable=AsyncMock) as mock_auth:
+        mock_auth.return_value = None
+        response = client.get("/events?token=invalid")
+        assert response.status_code == 401

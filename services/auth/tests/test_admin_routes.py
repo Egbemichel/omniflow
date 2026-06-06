@@ -73,3 +73,69 @@ def test_update_user_super_admin_unauthorized(client, db_session):
         headers={"X-User-Role": "admin", "X-Institution-Id": "1"},
     )
     assert response.status_code == 403
+
+
+def test_update_user_success(client, db_session):
+    u = User(email="t4@x.com", role="end_user", institution_id=1, full_name="Old Name")
+    db_session.add(u)
+    db_session.commit()
+    db_session.refresh(u)
+
+    response = client.put(
+        f"/admin/users/{u.id}",
+        json={"full_name": "Updated Name", "role": "staff"},
+        headers={"X-User-Role": "admin", "X-Institution-Id": "1"},
+    )
+    assert response.status_code == 200
+    assert response.json()["full_name"] == "Updated Name"
+    assert response.json()["role"] == "staff"
+
+
+def test_delete_user_success(client, db_session):
+    u = User(email="t5@x.com", role="end_user", institution_id=1)
+    db_session.add(u)
+    db_session.commit()
+    db_session.refresh(u)
+
+    response = client.delete(
+        f"/admin/users/{u.id}",
+        headers={"X-User-Role": "admin", "X-Institution-Id": "1"},
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "deleted"
+
+
+def test_delete_user_not_found(client):
+    response = client.delete(
+        "/admin/users/nonexistent",
+        headers={"X-User-Role": "super_admin"},
+    )
+    assert response.status_code == 404
+
+
+def test_update_user_super_admin_by_super_admin(client, db_session):
+    u = User(email="sa@x.com", role="end_user", institution_id=1)
+    db_session.add(u)
+    db_session.commit()
+    db_session.refresh(u)
+
+    response = client.put(
+        f"/admin/users/{u.id}",
+        json={"role": "super_admin"},
+        headers={"X-User-Role": "super_admin"},
+    )
+    assert response.status_code == 200
+    assert response.json()["role"] == "super_admin"
+
+
+def test_delete_super_admin_by_admin_forbidden(client, db_session):
+    u = User(email="sa2@x.com", role="super_admin", institution_id=1)
+    db_session.add(u)
+    db_session.commit()
+    db_session.refresh(u)
+
+    response = client.delete(
+        f"/admin/users/{u.id}",
+        headers={"X-User-Role": "admin", "X-Institution-Id": "1"},
+    )
+    assert response.status_code == 403
