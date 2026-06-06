@@ -4,6 +4,7 @@ import os
 import sys
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -45,6 +46,7 @@ os.environ.setdefault("GITHUB_CLIENT_SECRET", "test_github_secret")
 from app.main import app  # noqa: E402
 from app.database import Base, get_db  # noqa: E402
 from app.models.user import User  # noqa: E402
+from app.routes.dependencies import get_current_user  # noqa: E402
 from app.routes.magic_link import get_magic_link_service  # noqa: E402
 from app.services.magic_link_service import MagicLinkConfig, MagicLinkService  # noqa: E402
 
@@ -119,6 +121,33 @@ def client():
     """HTTP test client for the FastAPI app."""
     with TestClient(app) as c:
         yield c
+
+
+@pytest.fixture
+def as_user():
+    """Authenticate the test client as a given identity.
+
+    The auth service issues JWTs and authenticates via ``Authorization: Bearer``
+    (it does not trust gateway ``X-User-*`` headers like downstream services do).
+    Per CLAUDE.md §7.4, tests override ``get_current_user`` rather than mocking the
+    HTTP layer. Call this inside a test to install the override; it is removed
+    automatically at teardown.
+    """
+
+    def _set(role: str = "admin", institution_id: int = 1, user_id: str = "admin-1"):
+        identity = SimpleNamespace(
+            id=user_id,
+            email="actor@example.com",
+            role=role,
+            institution_id=institution_id,
+            actor_type=None,
+            is_active=True,
+        )
+        app.dependency_overrides[get_current_user] = lambda: identity
+        return identity
+
+    yield _set
+    app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.fixture
