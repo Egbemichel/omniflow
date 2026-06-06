@@ -137,21 +137,25 @@ pipeline {
                         fi
                     '''
 
-                    services.each { svc ->
-                        testTasks[svc] = {
-                            // Small staggered delay to avoid thundering herd on Docker network/DB
-                            def delay = services.indexOf(svc) * 5
-                            echo "Waiting ${delay}s before starting ${svc} tests..."
-                            sleep delay
+                    def services = ['auth', 'form', 'workflow', 'task', 'notification']
+                    def testTasks = [:]
 
-                            echo "====== Testing ${svc} (Parallel) ======"
+                    services.each { svc ->
+                        def serviceName = svc // Capture loop variable for closure
+                        def testDelay = services.indexOf(svc) * 5
+                        
+                        testTasks[serviceName] = {
+                            echo "Waiting ${testDelay}s before starting ${serviceName} tests..."
+                            sleep testDelay
+
+                            echo "====== Testing ${serviceName} (Parallel) ======"
                             sh """
                                 docker run --rm \
                                     --network ${CI_NETWORK} \
                                     -v ${WORKSPACE}:${WORKSPACE} \
-                                    -w ${WORKSPACE}/services/${svc} \
+                                    -w ${WORKSPACE}/services/${serviceName} \
                                     -e DATABASE_URL=postgresql://pk_user:pk_password@pk-postgres-${BUILD_NUMBER}:5432/paper_killer_test \
-                                    -e DATABASE_SCHEMA=${svc}_schema \
+                                    -e DATABASE_SCHEMA=${serviceName}_schema \
                                     -e REDIS_URL=redis://pk-redis-${BUILD_NUMBER}:6379/0 \
                                     -e JWT_SECRET=test_secret_key_not_for_production \
                                     -e JWT_ALGORITHM=HS256 \
@@ -306,18 +310,19 @@ pipeline {
 
     post {
         failure {
-            echo "Pipeline FAILED — branch: ${env.BRANCH_NAME} — tag: ${env.IMAGE_TAG}"
+            echo "Pipeline FAILED — branch: ${env.BRANCH_NAME ?: 'unknown'} — tag: ${IMAGE_TAG}"
         }
         always {
             // [3] Final cleanup of network and test base image
             sh """
+                docker rm -f pk-postgres-${BUILD_NUMBER} pk-redis-${BUILD_NUMBER} 2>/dev/null || true
                 docker network rm ${CI_NETWORK} 2>/dev/null || true
                 docker rmi ${TEST_BASE_IMG} 2>/dev/null || true
                 docker rmi \$(docker images 'pk-*' -q) --force 2>/dev/null || true
             """
         }
         success {
-            echo "Pipeline PASSED — branch: ${env.BRANCH_NAME} — tag: ${env.IMAGE_TAG}"
+            echo "Pipeline PASSED — branch: ${env.BRANCH_NAME ?: 'unknown'} — tag: ${IMAGE_TAG}"
         }
     }
 }
