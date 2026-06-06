@@ -34,19 +34,13 @@ def upgrade() -> None:
         ),
         sa.Column("institution_id", sa.Integer(), nullable=False),
         sa.Column("submitter_id", sa.String(), nullable=False),
-        sa.Column(
-            "status", sa.String(), nullable=False, server_default="SUBMITTED"
-        ),
+        sa.Column("status", sa.String(), nullable=False, server_default="SUBMITTED"),
         sa.Column(
             "submitted_at", sa.DateTime(timezone=True), server_default=now_default
         ),
-        sa.Column(
-            "updated_at", sa.DateTime(timezone=True), server_default=now_default
-        ),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=now_default),
     )
-    op.create_index(
-        "ix_form_submissions_form_id", "form_submissions", ["form_id"]
-    )
+    op.create_index("ix_form_submissions_form_id", "form_submissions", ["form_id"])
     op.create_index(
         "ix_form_submissions_institution_id", "form_submissions", ["institution_id"]
     )

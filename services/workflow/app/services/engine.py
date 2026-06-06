@@ -10,7 +10,16 @@ TASK_TYPES = {"actor"}
 
 # Branch-label vocabularies used to resolve a condition node from a task action.
 AFFIRMATIVE = {
-    "yes", "y", "if", "true", "approve", "approved", "continue", "repeat", "done", "ok",
+    "yes",
+    "y",
+    "if",
+    "true",
+    "approve",
+    "approved",
+    "continue",
+    "repeat",
+    "done",
+    "ok",
 }
 NEGATIVE = {"no", "n", "else", "false", "reject", "rejected", "exit", "stop"}
 
@@ -48,9 +57,14 @@ class WorkflowEngine:
         if current_node_id is None:
             start = next((n for n in node_list if n.get("type") == "start"), None)
             if start is None:
-                first = next((n for n in node_list if n.get("type") in TASK_TYPES), None)
+                first = next(
+                    (n for n in node_list if n.get("type") in TASK_TYPES), None
+                )
                 if first is None:
-                    return {"status": "ERROR", "message": "Workflow has no start or task node"}
+                    return {
+                        "status": "ERROR",
+                        "message": "Workflow has no start or task node",
+                    }
                 return self._as_step(first)
             cursor = start["id"]
         elif current_node_id in nodes:
@@ -71,11 +85,18 @@ class WorkflowEngine:
             outs = out_edges(cursor)
             if not outs:
                 # End node, or a task with no successor — treat as completion.
-                return {"next_step_id": None, "status": "COMPLETED", "assigned_role": None}
+                return {
+                    "next_step_id": None,
+                    "status": "COMPLETED",
+                    "assigned_role": None,
+                }
 
             if node.get("type") == "condition":
                 if cursor in visited_conditions:
-                    return {"status": "ERROR", "message": "Condition cycle has no task node"}
+                    return {
+                        "status": "ERROR",
+                        "message": "Condition cycle has no task node",
+                    }
                 visited_conditions.add(cursor)
                 edge = self._pick_branch(outs, action)
             else:
@@ -87,12 +108,21 @@ class WorkflowEngine:
             if nxt.get("type") in TASK_TYPES:
                 return self._as_step(nxt)
             if nxt.get("type") == "end":
-                return {"next_step_id": None, "status": "COMPLETED", "assigned_role": None}
+                return {
+                    "next_step_id": None,
+                    "status": "COMPLETED",
+                    "assigned_role": None,
+                }
             cursor = nxt["id"]  # start or condition — keep walking
 
     def _pick_branch(self, outs: List[dict], action: Optional[str]) -> dict:
         labeled = [(e, str(e.get("label") or "").strip().lower()) for e in outs]
-        is_negative = bool(action) and action.upper() in {"REJECT", "NO", "DENY", "FALSE"}
+        is_negative = bool(action) and action.upper() in {
+            "REJECT",
+            "NO",
+            "DENY",
+            "FALSE",
+        }
         if is_negative:
             for edge, label in labeled:
                 if label in NEGATIVE:

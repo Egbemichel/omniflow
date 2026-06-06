@@ -51,7 +51,9 @@ def get_public_schema(
     }
 
 
-@router.post("/forms/{form_id}/submit", response_model=SubmissionResponse, status_code=201)
+@router.post(
+    "/forms/{form_id}/submit", response_model=SubmissionResponse, status_code=201
+)
 def submit_form(
     form_id: str,
     payload: SubmitFormRequest,
@@ -81,7 +83,11 @@ def submit_form(
         submitter_id=submission.submitter_id,
     )
 
-    return {"submission_id": submission.id, "form_id": form_id, "status": submission.status}
+    return {
+        "submission_id": submission.id,
+        "form_id": form_id,
+        "status": submission.status,
+    }
 
 
 @router.get("/forms/{form_id}/submissions", response_model=SubmissionListResponse)
@@ -130,7 +136,9 @@ def get_qr_code(
             raise HTTPException(status_code=403, detail="Forbidden")
         raise HTTPException(status_code=404, detail="Form not found")
     if form.status != "PUBLISHED":
-        raise HTTPException(status_code=409, detail="Form must be PUBLISHED to generate a QR code")
+        raise HTTPException(
+            status_code=409, detail="Form must be PUBLISHED to generate a QR code"
+        )
 
     url = f"https://{_domain()}/submit/{form_id}"
     qr = segno.make(url, error="M")

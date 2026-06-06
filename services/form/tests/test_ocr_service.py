@@ -60,7 +60,11 @@ def test_extract_fields_carries_and_cleans_options(monkeypatch):
     def fake_call(self, file_path):
         return {
             "fields": [
-                {"label": "Sex", "field_type": "radio", "options": ["Male", "Female", "  "]},
+                {
+                    "label": "Sex",
+                    "field_type": "radio",
+                    "options": ["Male", "Female", "  "],
+                },
                 {"label": "Country", "field_type": "select", "options": ["NG", "CM"]},
                 {"label": "Full Name", "field_type": "text", "options": []},
                 {"label": "Subscribe", "field_type": "checkbox"},

@@ -67,7 +67,9 @@ def test_submit_triggers_workflow_via_task_service(
     assert "submission_id" in data
 
 
-def test_submit_form_persists_submission_and_field_values(client, published_form, db_session):
+def test_submit_form_persists_submission_and_field_values(
+    client, published_form, db_session
+):
     response = client.post(
         f"/forms/{published_form.id}/submit",
         json={
@@ -82,9 +84,11 @@ def test_submit_form_persists_submission_and_field_values(client, published_form
     submission_id = response.json()["submission_id"]
 
     db_session.expire_all()
-    submission = db_session.query(FormSubmission).filter(
-        FormSubmission.id == submission_id
-    ).first()
+    submission = (
+        db_session.query(FormSubmission)
+        .filter(FormSubmission.id == submission_id)
+        .first()
+    )
     assert submission is not None
     assert submission.institution_id == published_form.institution_id
     assert submission.submitter_id == "patient-1"
@@ -109,9 +113,11 @@ def test_submit_derives_institution_id_from_form(client, published_form, db_sess
     submission_id = response.json()["submission_id"]
 
     db_session.expire_all()
-    submission = db_session.query(FormSubmission).filter(
-        FormSubmission.id == submission_id
-    ).first()
+    submission = (
+        db_session.query(FormSubmission)
+        .filter(FormSubmission.id == submission_id)
+        .first()
+    )
     assert submission.institution_id == published_form.institution_id
 
 
@@ -124,9 +130,11 @@ def test_submit_anonymous_when_no_submitter_id(client, published_form, db_sessio
     submission_id = response.json()["submission_id"]
 
     db_session.expire_all()
-    submission = db_session.query(FormSubmission).filter(
-        FormSubmission.id == submission_id
-    ).first()
+    submission = (
+        db_session.query(FormSubmission)
+        .filter(FormSubmission.id == submission_id)
+        .first()
+    )
     assert submission.submitter_id == "anonymous"
 
 
@@ -179,7 +187,9 @@ def test_list_submissions_returns_paginated(admin_client, published_form, db_ses
             field_values=[],
         )
 
-    response = admin_client.get(f"/forms/{published_form.id}/submissions?page=1&page_size=2")
+    response = admin_client.get(
+        f"/forms/{published_form.id}/submissions?page=1&page_size=2"
+    )
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 3
@@ -198,7 +208,9 @@ def test_list_submissions_second_page(admin_client, published_form, db_session):
             field_values=[],
         )
 
-    response = admin_client.get(f"/forms/{published_form.id}/submissions?page=2&page_size=2")
+    response = admin_client.get(
+        f"/forms/{published_form.id}/submissions?page=2&page_size=2"
+    )
     assert response.status_code == 200
     assert len(response.json()["items"]) == 1
 
@@ -229,7 +241,9 @@ def test_list_submissions_cross_institution_returns_403(
 
 
 def test_list_submissions_nonexistent_form_returns_404(admin_client):
-    response = admin_client.get("/forms/00000000-0000-0000-0000-000000000000/submissions")
+    response = admin_client.get(
+        "/forms/00000000-0000-0000-0000-000000000000/submissions"
+    )
     assert response.status_code == 404
 
 

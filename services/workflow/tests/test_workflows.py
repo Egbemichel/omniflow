@@ -175,7 +175,9 @@ def test_update_replaces_steps_and_stores_graph(admin_client):
     assert body["graph"]["formId"] == "f2"
 
 
-def test_update_published_does_not_replace_steps(admin_client, create_workflow, add_step):
+def test_update_published_does_not_replace_steps(
+    admin_client, create_workflow, add_step
+):
     workflow = create_workflow(status="PUBLISHED")
     add_step(workflow.id, step_name="Locked", step_order=1)
     response = admin_client.patch(

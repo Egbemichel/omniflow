@@ -108,6 +108,7 @@ def update_schema(
     fields = repo.get_fields(form_id)
     return {"form_id": form.id, "status": form.status, "fields": fields}
 
+
 @router.delete("/forms/{form_id}", status_code=204)
 def delete_form(
     form_id: str,
@@ -160,6 +161,7 @@ def get_form_file(
         media_type=form.mime_type or "application/octet-stream",
         content_disposition_type="inline",
     )
+
 
 @router.post("/forms/{form_id}/publish", response_model=FormStatusResponse)
 def publish_form(
@@ -217,10 +219,34 @@ def suggest_workflow(
 
     # Keyword maps to roles
     role_keywords = {
-        "nurse": ["nurse", "triage", "vital", "temperature", "blood pressure", "weight", "height"],
-        "doctor": ["doctor", "physician", "diagnosis", "prescription", "medical", "treatment", "clinical"],
+        "nurse": [
+            "nurse",
+            "triage",
+            "vital",
+            "temperature",
+            "blood pressure",
+            "weight",
+            "height",
+        ],
+        "doctor": [
+            "doctor",
+            "physician",
+            "diagnosis",
+            "prescription",
+            "medical",
+            "treatment",
+            "clinical",
+        ],
         "pharmacist": ["pharmacist", "medication", "drug", "dosage", "pharmacy"],
-        "admin": ["admin", "signature", "approval", "authorisation", "authorization", "sign off", "director"],
+        "admin": [
+            "admin",
+            "signature",
+            "approval",
+            "authorisation",
+            "authorization",
+            "sign off",
+            "director",
+        ],
     }
 
     # Find which roles are relevant based on field names
