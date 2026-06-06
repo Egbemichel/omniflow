@@ -95,6 +95,12 @@ def test_google_login_inactive_user_returns_403(client, db_session, monkeypatch)
     )
     inactive = MagicMock()
     inactive.is_active = False
+    inactive.email = "inactive@hospital.com"
+    inactive.id = 99
+    inactive.role = "end_user"
+    inactive.actor_type = None
+    inactive.institution_id = 1
+    inactive.full_name = "Inactive"
     monkeypatch.setattr(
         "app.routes.oauth.UserRepository.upsert_oauth_user",
         lambda *a, **kw: (inactive, False),
@@ -206,6 +212,12 @@ def test_github_login_inactive_user_returns_403(client, monkeypatch):
     )
     inactive = MagicMock()
     inactive.is_active = False
+    inactive.email = "inactive@gh.com"
+    inactive.id = 100
+    inactive.role = "end_user"
+    inactive.actor_type = None
+    inactive.institution_id = 1
+    inactive.full_name = "Inactive"
     monkeypatch.setattr(
         "app.routes.oauth.UserRepository.upsert_oauth_user",
         lambda *a, **kw: (inactive, False),
