@@ -1,6 +1,3 @@
-import pytest
-from app.models.institution import Institution
-
 def test_create_institution_super_admin_only(client):
     response = client.post(
         "/institutions/",

@@ -1,4 +1,3 @@
-import pytest
 from app.models.user import User
 
 def test_list_users_as_admin(client):
