@@ -53,9 +53,11 @@ pipeline {
                 docker {
                     image "${TEST_BASE_IMG}"
                     reuseNode true
-                    // --dns bypasses the broken internal resolver so pip-audit can
-                    // reach PyPI; without it pip-audit hangs until the stage timeout.
-                    args '-u root --dns=8.8.8.8 --dns=1.1.1.1'
+                    // --network=host: bridge containers on this VPS have no outbound
+                    // egress (pip-audit's venv bootstrap couldn't reach PyPI). Host
+                    // networking has working DNS + egress, same as the image builds.
+                    // (--dns is incompatible with host networking, so it's dropped.)
+                    args '-u root --network=host'
                 }
             }
             steps {
