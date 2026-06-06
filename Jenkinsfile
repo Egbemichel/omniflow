@@ -40,7 +40,9 @@ pipeline {
         // ─── STAGE 0: PREPARE TEST IMAGE ────────────────────────────────────
         stage('Prepare Test Base') {
             steps {
-                sh "docker build -t ${TEST_BASE_IMG} -f services/Dockerfile.test ."
+                // --network=host makes the build use the host's working resolver,
+                // bypassing the broken container DNS entirely (BuildKit ignores daemon `dns`).
+                sh "docker build --network=host -t ${TEST_BASE_IMG} -f services/Dockerfile.test ."
             }
         }
 
@@ -126,6 +128,7 @@ pipeline {
                             sh """
                                 docker run --rm \
                                     --network ${CI_NETWORK} \
+                                    --dns=8.8.8.8 --dns=1.1.1.1 \
                                     -v ${WORKSPACE}:${WORKSPACE} \
                                     -w ${WORKSPACE}/services/${svc} \
                                     -e DATABASE_URL=postgresql://pk_user:pk_password@pk-postgres-${BUILD_NUMBER}:5432/paper_killer_test \
@@ -171,12 +174,12 @@ pipeline {
             steps {
                 sh '''
                     echo "Building all service images (tag: ${IMAGE_TAG})..."
-                    docker build -t pk-auth:${IMAGE_TAG}         ./services/auth
-                    docker build -t pk-form:${IMAGE_TAG}         ./services/form
-                    docker build -t pk-workflow:${IMAGE_TAG}     ./services/workflow
-                    docker build -t pk-task:${IMAGE_TAG}         ./services/task
-                    docker build -t pk-notification:${IMAGE_TAG} ./services/notification
-                    docker build -t pk-frontend:${IMAGE_TAG}     ./frontend
+                    docker build --network=host -t pk-auth:${IMAGE_TAG}         ./services/auth
+                    docker build --network=host -t pk-form:${IMAGE_TAG}         ./services/form
+                    docker build --network=host -t pk-workflow:${IMAGE_TAG}     ./services/workflow
+                    docker build --network=host -t pk-task:${IMAGE_TAG}         ./services/task
+                    docker build --network=host -t pk-notification:${IMAGE_TAG} ./services/notification
+                    docker build --network=host -t pk-frontend:${IMAGE_TAG}     ./frontend
 
                     echo "All images built successfully"
                     docker images | grep "^pk-"
