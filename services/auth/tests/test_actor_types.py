@@ -57,7 +57,9 @@ def test_list_is_institution_scoped_and_deletable(client, db_session, create_use
 
 def test_duplicate_label_rejected(client, db_session, create_user):
     admin = create_user(db_session, email="a4@h.com", role="admin", institution_id=9)
-    client.post("/admin/actor-types", headers=_auth_header(admin), json={"label": "Nurse"})
+    client.post(
+        "/admin/actor-types", headers=_auth_header(admin), json={"label": "Nurse"}
+    )
     dup = client.post(
         "/admin/actor-types", headers=_auth_header(admin), json={"label": "Nurse"}
     )
@@ -86,9 +88,7 @@ def test_registered_actor_type_sets_role_on_login(
         headers=_auth_header(admin),
         json={"label": "Registrar", "system_role": "admin"},
     )
-    csv_content = (
-        "name,email,role,department\nRita Reg,rita@h.com,Registrar,Office\n"
-    )
+    csv_content = "name,email,role,department\nRita Reg,rita@h.com,Registrar,Office\n"
     upload = client.post(
         "/admin/institutions/42/staff/upload",
         headers=_auth_header(admin),

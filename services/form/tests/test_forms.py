@@ -116,13 +116,27 @@ def test_suggest_workflow_stub(admin_client, db_session, create_form):
     assert isinstance(data["steps"], list)
     assert len(data["steps"]) > 0
 
+
 def test_get_schema_returns_fields(admin_client, db_session, create_form):
     form = create_form(status="READY")
     repo = FormRepository(db_session)
-    repo.replace_fields(form.id, [
-        {"field_name": "Patient Name", "field_type": "text", "required": True, "position": 0},
-        {"field_name": "Date of Birth", "field_type": "date", "required": False, "position": 1},
-    ])
+    repo.replace_fields(
+        form.id,
+        [
+            {
+                "field_name": "Patient Name",
+                "field_type": "text",
+                "required": True,
+                "position": 0,
+            },
+            {
+                "field_name": "Date of Birth",
+                "field_type": "date",
+                "required": False,
+                "position": 1,
+            },
+        ],
+    )
     db_session.commit()
 
     response = admin_client.get(f"/forms/{form.id}/schema")
@@ -134,13 +148,16 @@ def test_get_schema_returns_fields(admin_client, db_session, create_form):
     assert "Patient Name" in field_names
     assert "Date of Birth" in field_names
 
+
 def test_get_schema_returns_404_for_nonexistent_form(admin_client):
     response = admin_client.get("/forms/00000000-0000-0000-0000-000000000000/schema")
     assert response.status_code == 404
 
+
 def test_get_status_returns_404_for_nonexistent_form(admin_client):
     response = admin_client.get("/forms/00000000-0000-0000-0000-000000000000/status")
     assert response.status_code == 404
+
 
 def test_list_forms_pagination(admin_client, db_session, create_form):
     create_form(institution_id=1)
@@ -152,6 +169,7 @@ def test_list_forms_pagination(admin_client, db_session, create_form):
     data = response.json()
     assert len(data["items"]) == 2
 
+
 def test_list_forms_second_page(admin_client, db_session, create_form):
     create_form(institution_id=1)
     create_form(institution_id=1)
@@ -161,6 +179,7 @@ def test_list_forms_second_page(admin_client, db_session, create_form):
     assert response.status_code == 200
     data = response.json()
     assert len(data["items"]) == 1
+
 
 def test_schema_patch_returns_404_for_nonexistent_form(admin_client):
     response = admin_client.patch(
@@ -177,6 +196,7 @@ def test_schema_patch_returns_404_for_nonexistent_form(admin_client):
         },
     )
     assert response.status_code == 404
+
 
 def test_status_processing_returns_no_fields(admin_client, db_session, create_form):
     form = create_form(status="PROCESSING")

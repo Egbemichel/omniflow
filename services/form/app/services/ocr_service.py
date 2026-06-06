@@ -119,11 +119,14 @@ inputs — but a signature line or box IS an input, never skip it."""
 
 
 # Used for the single retry when the first response is not valid JSON.
-_STRICT_PROMPT = _PROMPT + """
+_STRICT_PROMPT = (
+    _PROMPT
+    + """
 
 CRITICAL: Your previous reply could not be parsed as JSON. Reply with VALID JSON \
 ONLY — a single JSON object matching the shape above. No prose, no markdown, no \
 code fences, no comments, no trailing commas. Output nothing but the JSON object."""
+)
 
 
 class OCRError(Exception):

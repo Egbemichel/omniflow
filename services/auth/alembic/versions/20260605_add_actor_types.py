@@ -35,9 +35,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=now_default),
         sa.UniqueConstraint("institution_id", "label", name="uq_actor_type_label"),
     )
-    op.create_index(
-        "ix_actor_types_institution_id", "actor_types", ["institution_id"]
-    )
+    op.create_index("ix_actor_types_institution_id", "actor_types", ["institution_id"])
 
 
 def downgrade() -> None:

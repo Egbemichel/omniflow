@@ -26,7 +26,9 @@ def test_upload_happy_path(admin_client, db_session, upload_dir, monkeypatch):
 
     published = {}
 
-    def fake_publish(self, form_id, institution_id, admin_id, field_count, status="completed"):
+    def fake_publish(
+        self, form_id, institution_id, admin_id, field_count, status="completed"
+    ):
         published["payload"] = {
             "form_id": form_id,
             "institution_id": institution_id,
@@ -84,13 +86,18 @@ def test_upload_missing_auth_returns_401(client, upload_dir):
     )
     assert response.status_code == 401
 
-def test_upload_ocr_failure_sets_failed_status(admin_client, db_session, upload_dir, monkeypatch):
+
+def test_upload_ocr_failure_sets_failed_status(
+    admin_client, db_session, upload_dir, monkeypatch
+):
     def fake_extract_failure(self, file_path):
         raise RuntimeError("OCR engine crashed")
 
     published = {}
 
-    def fake_publish(self, form_id, institution_id, admin_id, field_count, status="completed"):
+    def fake_publish(
+        self, form_id, institution_id, admin_id, field_count, status="completed"
+    ):
         published["status"] = status
         published["field_count"] = field_count
 

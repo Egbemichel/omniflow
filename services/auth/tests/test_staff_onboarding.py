@@ -148,8 +148,7 @@ def test_login_custom_actor_type_maps_to_staff_role(
         institution_id=42,
     )
     csv_content = (
-        "name,email,role,department\n"
-        "Nurse Joy,joy@hospital.com,NURSE,Pediatrics\n"
+        "name,email,role,department\nNurse Joy,joy@hospital.com,NURSE,Pediatrics\n"
     )
     upload = client.post(
         "/admin/institutions/42/staff/upload",

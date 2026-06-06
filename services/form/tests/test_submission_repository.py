@@ -75,7 +75,11 @@ def test_create_submission_returns_record(form_with_fields, db_session):
         institution_id=1,
         submitter_id="user-42",
         field_values=[
-            {"field_id": fields[0].id, "field_name": fields[0].field_name, "value": "Test"},
+            {
+                "field_id": fields[0].id,
+                "field_name": fields[0].field_name,
+                "value": "Test",
+            },
         ],
     )
     assert submission.id is not None
@@ -93,8 +97,16 @@ def test_create_submission_persists_field_values(form_with_fields, db_session):
         institution_id=1,
         submitter_id="user-42",
         field_values=[
-            {"field_id": fields[0].id, "field_name": "Full Name", "value": "Marie Atanga"},
-            {"field_id": fields[1].id, "field_name": "Date of Birth", "value": "1990-01-15"},
+            {
+                "field_id": fields[0].id,
+                "field_name": "Full Name",
+                "value": "Marie Atanga",
+            },
+            {
+                "field_id": fields[1].id,
+                "field_name": "Date of Birth",
+                "value": "1990-01-15",
+            },
         ],
     )
     values = (
@@ -175,7 +187,14 @@ def test_field_name_survives_schema_replacement(form_with_fields, db_session):
     # Simulate admin editing the schema after submission
     repo.replace_fields(
         form.id,
-        [{"field_name": "Renamed Field", "field_type": "text", "required": False, "position": 0}],
+        [
+            {
+                "field_name": "Renamed Field",
+                "field_type": "text",
+                "required": False,
+                "position": 0,
+            }
+        ],
     )
     fv = (
         db_session.query(FormFieldValue)
@@ -207,7 +226,10 @@ def test_get_submission_wrong_institution_returns_none(submitted_form, db_sessio
 
 def test_get_submission_nonexistent_returns_none(db_session):
     repo = FormRepository(db_session)
-    assert repo.get_submission("00000000-0000-0000-0000-000000000000", institution_id=1) is None
+    assert (
+        repo.get_submission("00000000-0000-0000-0000-000000000000", institution_id=1)
+        is None
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -218,10 +240,16 @@ def test_get_submission_nonexistent_returns_none(db_session):
 def test_list_submissions_returns_all(form_with_fields, db_session):
     form, _ = form_with_fields
     repo = FormRepository(db_session)
-    repo.create_submission(form_id=form.id, institution_id=1, submitter_id="u1", field_values=[])
-    repo.create_submission(form_id=form.id, institution_id=1, submitter_id="u2", field_values=[])
+    repo.create_submission(
+        form_id=form.id, institution_id=1, submitter_id="u1", field_values=[]
+    )
+    repo.create_submission(
+        form_id=form.id, institution_id=1, submitter_id="u2", field_values=[]
+    )
 
-    total, items = repo.list_submissions(form.id, institution_id=1, page=1, page_size=10)
+    total, items = repo.list_submissions(
+        form.id, institution_id=1, page=1, page_size=10
+    )
     assert total == 2
     assert len(items) == 2
 
@@ -229,7 +257,9 @@ def test_list_submissions_returns_all(form_with_fields, db_session):
 def test_list_submissions_empty_form_returns_zero(form_with_fields, db_session):
     form, _ = form_with_fields
     repo = FormRepository(db_session)
-    total, items = repo.list_submissions(form.id, institution_id=1, page=1, page_size=10)
+    total, items = repo.list_submissions(
+        form.id, institution_id=1, page=1, page_size=10
+    )
     assert total == 0
     assert items == []
 
@@ -238,10 +268,16 @@ def test_list_submissions_scoped_by_institution(db_session, create_form):
     form_a = create_form(institution_id=1)
     form_b = create_form(institution_id=2)
     repo = FormRepository(db_session)
-    repo.create_submission(form_id=form_a.id, institution_id=1, submitter_id="u1", field_values=[])
-    repo.create_submission(form_id=form_b.id, institution_id=2, submitter_id="u2", field_values=[])
+    repo.create_submission(
+        form_id=form_a.id, institution_id=1, submitter_id="u1", field_values=[]
+    )
+    repo.create_submission(
+        form_id=form_b.id, institution_id=2, submitter_id="u2", field_values=[]
+    )
 
-    total, items = repo.list_submissions(form_a.id, institution_id=1, page=1, page_size=10)
+    total, items = repo.list_submissions(
+        form_a.id, institution_id=1, page=1, page_size=10
+    )
     assert total == 1
     assert items[0].institution_id == 1
 
@@ -250,8 +286,12 @@ def test_list_submissions_scoped_by_form(form_with_fields, db_session, create_fo
     form1, _ = form_with_fields
     form2 = create_form(institution_id=1)
     repo = FormRepository(db_session)
-    repo.create_submission(form_id=form1.id, institution_id=1, submitter_id="u1", field_values=[])
-    repo.create_submission(form_id=form2.id, institution_id=1, submitter_id="u2", field_values=[])
+    repo.create_submission(
+        form_id=form1.id, institution_id=1, submitter_id="u1", field_values=[]
+    )
+    repo.create_submission(
+        form_id=form2.id, institution_id=1, submitter_id="u2", field_values=[]
+    )
 
     total, _ = repo.list_submissions(form1.id, institution_id=1, page=1, page_size=10)
     assert total == 1
