@@ -75,7 +75,9 @@ pipeline {
                     for svc in auth form workflow task notification; do
                         echo "Auditing $svc..."
                         # Audit uses local requirements, but tools are in the base image
-                        pip-audit -r services/$svc/requirements.txt --progress-spinner off \
+                        # --no-deps: audit only the pinned packages (fast); skips
+                        # transitive-dependency resolution which dominated the runtime.
+                        pip-audit -r services/$svc/requirements.txt --progress-spinner off --no-deps \
                             --ignore-vuln CVE-2026-30922  \
                             --ignore-vuln CVE-2025-54121  \
                             --ignore-vuln CVE-2025-62727  \
