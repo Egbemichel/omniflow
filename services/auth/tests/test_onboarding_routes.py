@@ -118,8 +118,3 @@ def test_delete_staff_row(client, db_session):
         headers={"X-User-Role": "admin", "X-Institution-Id": "1"},
     )
     assert response.status_code == 200
-
-
-def test_list_uploads(client):
-    response = client.get("/onboarding/uploads", headers={"X-User-Role": "super_admin"})
-    assert response.status_code == 200

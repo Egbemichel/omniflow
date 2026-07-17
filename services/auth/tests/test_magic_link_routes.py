@@ -1,3 +1,4 @@
+import pytest
 from unittest.mock import patch
 from app.repositories.user_repository import UserRepository
 
@@ -90,6 +91,3 @@ def test_get_magic_link_config_missing_env(monkeypatch):
     with pytest.raises(RuntimeError) as exc:
         get_magic_link_config()
     assert "REDIS_URL is required" in str(exc.value)
-
-
-import pytest

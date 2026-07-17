@@ -12,6 +12,7 @@ from fastapi import Header, HTTPException, Depends
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
+from app.routes.dependencies import get_current_user
 
 # ---------------------------------------------------------------------------
 # Path bootstrap — must happen before ANY local imports.
@@ -70,7 +71,6 @@ def override_get_db():
 # ---------------------------------------------------------------------------
 # Dependency Overrides for Testing
 # ---------------------------------------------------------------------------
-from app.routes.dependencies import get_current_user
 
 
 async def mock_get_current_user(

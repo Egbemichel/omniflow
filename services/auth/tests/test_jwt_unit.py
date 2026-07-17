@@ -1,4 +1,3 @@
-import os
 import pytest
 from datetime import timedelta
 from app.services.jwt_service import create_access_token, decode_token, _get_jwt_secret
