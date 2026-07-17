@@ -48,6 +48,7 @@ os.environ.setdefault("GITHUB_CLIENT_SECRET", "test_github_secret")
 # ---------------------------------------------------------------------------
 from app.main import app  # noqa: E402
 from app.database import Base, get_db  # noqa: E402
+from app.models.institution import Institution  # noqa: E402
 from app.models.user import User  # noqa: E402
 from app.routes.magic_link import get_magic_link_service  # noqa: E402
 from app.services.magic_link_service import MagicLinkConfig, MagicLinkService  # noqa: E402
@@ -85,11 +86,12 @@ async def mock_get_current_user(
     WHILE STILL supporting standard Bearer tokens for verify tests.
     """
     if x_user_role:
+        default_institution_id = 0 if x_user_role == "super_admin" else 1
 
         class MockUser:
             def __init__(self, role, institution_id, id_):
                 self.role = role
-                self.institution_id = int(institution_id) if institution_id else 1
+                self.institution_id = int(institution_id) if institution_id else default_institution_id
                 self.id = id_ or "mock-user-id"
                 self.is_active = True
                 self.email = "mock@example.com"
@@ -123,6 +125,8 @@ def setup_db():
     # Don't call Base.metadata.create_all() — Alembic handles it
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = mock_get_current_user
+    if engine.dialect.name == "sqlite":
+        Base.metadata.create_all(bind=engine)
     yield
     # Only drop tables on the local SQLite fast-path. NEVER drop the shared
     # Postgres schema — Alembic owns it, and dropping it breaks the running stack.
@@ -143,6 +147,24 @@ def setup_db():
 @pytest.fixture(autouse=True)
 def clean_db():
     """Wipe all rows between each test — guarantees full isolation."""
+    try:
+        with engine.begin() as conn:
+            if engine.dialect.name == "postgresql":
+                conn.execute(text("SET search_path TO auth_schema"))
+            db = TestingSessionLocal()
+            try:
+                if engine.dialect.name == "postgresql":
+                    db.execute(text("SET search_path TO auth_schema"))
+                    db.commit()
+
+                if not db.query(Institution).filter(Institution.id == 1).first():
+                    db.add(Institution(id=1, name="Paper Killer Root", type="office"))
+                    db.commit()
+            finally:
+                db.close()
+    except Exception:
+        pass
+
     yield
     try:
         with engine.begin() as conn:

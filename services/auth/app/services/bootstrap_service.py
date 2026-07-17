@@ -10,6 +10,35 @@ from app.models.user import User
 DEFAULT_BOOTSTRAP_INSTITUTION_ID = 1
 
 
+def ensure_default_institution(db: Session) -> Institution:
+    desired_name = os.getenv("BOOTSTRAP_INSTITUTION_NAME", "Paper Killer Root")
+    desired_type = os.getenv("BOOTSTRAP_INSTITUTION_TYPE", "office")
+
+    institution = db.query(Institution).filter(Institution.id == 1).first()
+    if institution:
+        changed = False
+        if institution.name != desired_name:
+            institution.name = desired_name
+            changed = True
+        if institution.type != desired_type:
+            institution.type = desired_type
+            changed = True
+        if changed:
+            db.commit()
+            db.refresh(institution)
+        return institution
+
+    institution = Institution(
+        id=DEFAULT_BOOTSTRAP_INSTITUTION_ID,
+        name=desired_name,
+        type=desired_type,
+    )
+    db.add(institution)
+    db.commit()
+    db.refresh(institution)
+    return institution
+
+
 def bootstrap_super_admin(db: Session) -> User | None:
     email = os.getenv("BOOTSTRAP_SUPER_ADMIN_EMAIL")
     if not email:
@@ -18,15 +47,7 @@ def bootstrap_super_admin(db: Session) -> User | None:
     normalized_email = email.strip().lower()
     full_name = os.getenv("BOOTSTRAP_SUPER_ADMIN_NAME", "Paper Killer Super Admin")
 
-    institution = db.query(Institution).filter(Institution.id == 1).first()
-    if not institution:
-        institution = Institution(
-            id=DEFAULT_BOOTSTRAP_INSTITUTION_ID,
-            name=os.getenv("BOOTSTRAP_INSTITUTION_NAME", "Paper Killer Root"),
-            type="office",
-        )
-        db.add(institution)
-        db.flush()
+    institution = ensure_default_institution(db)
 
     user = db.query(User).filter(User.email == normalized_email).first()
     if user:
