@@ -49,7 +49,6 @@ os.environ.setdefault("GITHUB_CLIENT_SECRET", "test_github_secret")
 # ---------------------------------------------------------------------------
 from app.main import app  # noqa: E402
 from app.database import Base, get_db  # noqa: E402
-from app.models.institution import Institution  # noqa: E402
 from app.models.user import User  # noqa: E402
 from app.routes.magic_link import get_magic_link_service  # noqa: E402
 from app.services.magic_link_service import MagicLinkConfig, MagicLinkService  # noqa: E402
