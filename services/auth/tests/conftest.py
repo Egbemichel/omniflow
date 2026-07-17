@@ -91,7 +91,9 @@ async def mock_get_current_user(
         class MockUser:
             def __init__(self, role, institution_id, id_):
                 self.role = role
-                self.institution_id = int(institution_id) if institution_id else default_institution_id
+                self.institution_id = (
+                    int(institution_id) if institution_id else default_institution_id
+                )
                 self.id = id_ or "mock-user-id"
                 self.is_active = True
                 self.email = "mock@example.com"
