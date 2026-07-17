@@ -27,6 +27,7 @@ pipeline {
     environment {
         GHCR_USER    = credentials('ghcr-username')
         GHCR_TOKEN   = credentials('ghcr-token')
+        TARGET_BRANCH = 'main'
         IMAGE_PREFIX = "ghcr.io/${GHCR_USER}/paper-killer"
         // [2] safe on shallow clones; GIT_COMMIT slice crashes when commit is unavailable
         IMAGE_TAG    = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
@@ -36,6 +37,14 @@ pipeline {
     }
 
     stages {
+
+        stage('Log Branch Context') {
+            steps {
+                echo "Building branch: ${env.BRANCH_NAME ?: 'unknown'}"
+                echo "Target branch: ${env.TARGET_BRANCH}"
+                echo "Change branch: ${env.CHANGE_BRANCH ?: 'n/a'}"
+            }
+        }
 
         // ─── STAGE 0: PREPARE TEST IMAGE ────────────────────────────────────
         stage('Prepare Test Base') {
