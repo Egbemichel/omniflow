@@ -192,7 +192,7 @@ pipeline {
                             sleep testDelay
 
                             echo "====== Testing ${serviceName} (Parallel) ======"
-                            sh """
+                            sh '''
                                 docker run --rm \
                                     --network container:pk-postgres-${BUILD_NUMBER} \
                                     -v ${WORKSPACE}:${WORKSPACE} \
@@ -204,7 +204,7 @@ pipeline {
                                     -e JWT_ALGORITHM=HS256 \
                                     -e JWT_EXPIRE_MINUTES=60 \
                                     ${TEST_BASE_IMG} \
-                                    sh -c "
+                                    sh -c '
                                         pip install --no-index --find-links=/wheels -r requirements.txt --quiet --root-user-action=ignore &&
                                         PYTHONPATH=.:../.. alembic upgrade head &&
                                         PYTHONPATH=.:../.. pytest tests/ -v \
@@ -213,8 +213,8 @@ pipeline {
                                             --cov-report=xml:coverage.xml \
                                             --cov-report=html:htmlcov \
                                             --cov-fail-under=85
-                                    "
-                            """
+                                    '
+                            '''
                         }
                     }
 
@@ -336,9 +336,9 @@ pipeline {
         }
         always {
             // [3] Final cleanup of network and test base image
-            sh """
+            sh '''
                 docker rmi $(docker images "${REGISTRY}/omniflow-*" -q) --force 2>/dev/null || true
-            """
+            '''
         }
         success {
             echo "Pipeline PASSED — branch: ${env.BRANCH_NAME ?: 'unknown'} "
