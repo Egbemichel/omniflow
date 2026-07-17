@@ -38,13 +38,38 @@ pipeline {
 
     stages {
 
+        stage('Debug CI') {
+        steps {
+            sh '''
+                echo "===== Git Information ====="
+                git branch --show-current || true
+                git rev-parse --abbrev-ref HEAD || true
+                git rev-parse HEAD || true
+
+                echo
+                echo "===== Jenkins Environment ====="
+                env | sort | grep -E 'BRANCH|GIT|CHANGE|JOB|BUILD' || true
+            '''
+        }
+    }
+
+
         stage('Log Branch Context') {
             steps {
-                echo "Building branch: ${env.BRANCH_NAME ?: 'unknown'}"
-                echo "Target branch: ${env.TARGET_BRANCH}"
-                echo "Change branch: ${env.CHANGE_BRANCH ?: 'n/a'}"
+                script {
+                    def currentBranch = sh(
+                        script: "git rev-parse --abbrev-ref HEAD",
+                        returnStdout: true
+                    ).trim()
+
+                    echo "Current Git Branch : ${currentBranch}"
+                    echo "BRANCH_NAME        : ${env.BRANCH_NAME}"
+                    echo "GIT_BRANCH         : ${env.GIT_BRANCH}"
+                    echo "CHANGE_BRANCH      : ${env.CHANGE_BRANCH}"
+                    echo "Target Branch      : ${env.TARGET_BRANCH}"
+                }
             }
-        }
+      }
 
         // ─── STAGE 0: PREPARE TEST IMAGE ────────────────────────────────────
         stage('Prepare Test Base') {
