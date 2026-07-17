@@ -57,12 +57,7 @@ pipeline {
         stage('Log Branch Context') {
             steps {
                 script {
-                    def currentBranch = sh(
-                        script: "git rev-parse --abbrev-ref HEAD",
-                        returnStdout: true
-                    ).trim()
-
-                    echo "Current Git Branch : ${currentBranch}"
+                    
                     echo "BRANCH_NAME        : ${env.BRANCH_NAME}"
                     echo "GIT_BRANCH         : ${env.GIT_BRANCH}"
                     echo "CHANGE_BRANCH      : ${env.CHANGE_BRANCH}"
@@ -251,7 +246,11 @@ pipeline {
 
         // ─── STAGE 4: PUSH TO REGISTRY (main only) ──────────────────────────
         stage('Push Images') {
-            when { branch 'main' }
+            when { 
+                expression {
+                    env.GIT_BRANCH == 'origin/main'
+                }
+             }
             options { timeout(time: 10, unit: 'MINUTES') }  // [5]
             steps {
                 // [7] withCredentials keeps the token out of the console log
@@ -276,7 +275,11 @@ pipeline {
         /* ─── STAGE 5: DEPLOY TO KUBERNETES  ───── */
         
         stage('Deploy to Kubernetes') {
-            when { branch 'main' }
+            when { 
+                expression {
+                    env.GIT_BRANCH == 'origin/main'
+                }
+             }
             agent {
                 docker {
                     image 'bitnami/kubectl:latest'
@@ -303,7 +306,11 @@ pipeline {
 
         // ─── STAGE 6: SMOKE TESTS  ──────────────
         stage('Smoke Tests') {
-            when { branch 'main' }
+            when { 
+                expression {
+                    env.GIT_BRANCH == 'origin/main'
+                }
+             }
             steps {
                 script {
                     // Start all services in the background on the CI network for validation
