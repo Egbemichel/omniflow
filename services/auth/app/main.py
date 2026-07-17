@@ -4,7 +4,10 @@ from app import models  # noqa: F401
 from app.database import engine, SessionLocal
 from app.routes.api import router
 from app.schema_utils import validate_schema_isolation
-from app.services.bootstrap_service import bootstrap_super_admin, ensure_default_institution
+from app.services.bootstrap_service import (
+    bootstrap_super_admin,
+    ensure_default_institution,
+)
 
 app = FastAPI(title="OmniFlow Auth Service", version="1.0.0")
 
