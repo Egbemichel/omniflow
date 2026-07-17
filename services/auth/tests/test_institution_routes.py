@@ -76,6 +76,7 @@ def test_get_institution_forbidden(client):
 
 def test_delete_institution_success(client, db_session):
     from app.models.institution import Institution
+
     inst = Institution(name="To Delete", type="lab")
     db_session.add(inst)
     db_session.commit()

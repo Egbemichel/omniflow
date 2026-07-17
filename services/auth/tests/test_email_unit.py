@@ -1,6 +1,7 @@
 import unittest.mock as mock
 from app.services.email_service import send_magic_link
 
+
 def test_send_magic_link():
     with mock.patch("resend.Emails.send") as mock_send:
         send_magic_link("test@example.com", "http://magic.link/123")

@@ -102,26 +102,33 @@ async def test_sse_endpoint_authorized(client):
     # Mock authentication to return a valid user
     with patch("app.sse._authenticate", new_callable=AsyncMock) as mock_auth:
         mock_auth.return_value = {"institution_id": 1, "user_id": "u1", "role": "admin"}
-        
+
         # Mock Redis
         with patch("redis.asyncio.from_url") as mock_redis_url:
-            mock_redis = MagicMock() # Use MagicMock for the client as its methods are not all async
+            mock_redis = (
+                MagicMock()
+            )  # Use MagicMock for the client as its methods are not all async
             mock_redis_url.return_value = mock_redis
-            mock_pubsub = AsyncMock() # pubsub methods are async
+            mock_pubsub = AsyncMock()  # pubsub methods are async
             mock_redis.pubsub.return_value = mock_pubsub
-            
+
             # Setup pubsub.get_message to return one message then None (to test loop)
             mock_pubsub.get_message.side_effect = [
-                {"channel": "events", "data": '{"institution_id": 1, "event": "ocr.completed"}'},
-                None
+                {
+                    "channel": "events",
+                    "data": '{"institution_id": 1, "event": "ocr.completed"}',
+                },
+                None,
             ]
-            
+
             # Use request.is_disconnected to exit the loop
-            with patch("fastapi.Request.is_disconnected", side_effect=[False, False, True]):
+            with patch(
+                "fastapi.Request.is_disconnected", side_effect=[False, False, True]
+            ):
                 response = client.get("/events?token=valid")
                 assert response.status_code == 200
                 assert "text/event-stream" in response.headers["content-type"]
-                
+
                 # Check that it connected
                 content = b"".join(response.iter_bytes())
                 assert b": connected" in content

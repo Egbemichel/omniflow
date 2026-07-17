@@ -160,7 +160,7 @@ def clean_db():
                 for table in reversed(Base.metadata.sorted_tables):
                     conn.execute(table.delete())
     except Exception:
-        # If database is not available, we skip cleaning. 
+        # If database is not available, we skip cleaning.
         # Integration tests will still fail when they try to use DB.
         pass
 
