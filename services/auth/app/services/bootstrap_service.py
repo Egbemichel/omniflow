@@ -16,17 +16,15 @@ def _sync_institution_sequence(db: Session) -> None:
         return
 
     schema = os.getenv("DATABASE_SCHEMA", "auth_schema")
-    db.execute(
-        text(  # nosec B608
-            f"""
-            SELECT setval(
-                pg_get_serial_sequence('{schema}.institutions', 'id'),
-                GREATEST((SELECT COALESCE(MAX(id), 1) FROM {schema}.institutions), 1),
-                true
-            )
-            """
-        )
+
+    sql = (
+        "SELECT setval("
+        f"pg_get_serial_sequence('{schema}.institutions', 'id'), "
+        f"GREATEST((SELECT COALESCE(MAX(id), 1) FROM {schema}.institutions), 1), "
+        "true)"
     )
+
+    db.execute(text(sql))
     db.commit()
 
 
