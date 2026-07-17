@@ -19,21 +19,28 @@ pipeline {
     agent any
 
     options {
-        timeout(time: 40, unit: 'MINUTES')   // [5] kill the whole pipeline if it hangs
-        disableConcurrentBuilds()            // prevent same-branch collision on small setups
-        buildDiscarder(logRotator(numToKeepStr: '20'))
+        timestamps()
+        ansiColor('xterm')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
     environment {
-        GHCR_USER    = credentials('ghcr-username')
-        GHCR_TOKEN   = credentials('ghcr-token')
-        TARGET_BRANCH = 'main'
-        IMAGE_PREFIX = "ghcr.io/${GHCR_USER}/paper-killer"
-        // [2] safe on shallow clones; GIT_COMMIT slice crashes when commit is unavailable
-        IMAGE_TAG    = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-        // [6] unique network per build — prevents collision when two builds run in parallel
-        CI_NETWORK   = "pk-ci-network-${env.BUILD_NUMBER}"
-        TEST_BASE_IMG = "pk-test-base:${env.BUILD_NUMBER}"
+
+        REGISTRY = "127.0.0.1:5001"
+
+        AUTH_IMAGE = "${REGISTRY}/omniflow-auth"
+        WORKFLOW_IMAGE = "${REGISTRY}/omniflow-workflow"
+        TASK_IMAGE = "${REGISTRY}/omniflow-task"
+        FORM_IMAGE = "${REGISTRY}/omniflow-form"
+        NOTIFICATION_IMAGE = "${REGISTRY}/omniflow-notification"
+        FRONTEND_IMAGE = "${REGISTRY}/omniflow-frontend"
+
+
+        TEST_BASE_IMG = "omniflow-test-base:${BUILD_NUMBER}"
+        CI_NETWORK = "omniflow-ci-${BUILD_NUMBER}"
+
+        KUBE_NAMESPACE = "omniflow"
     }
 
     stages {
@@ -52,6 +59,8 @@ pipeline {
             '''
         }
     }
+
+       
 
 
         stage('Log Branch Context') {
@@ -226,53 +235,37 @@ pipeline {
         }
 
         // ─── STAGE 3: DOCKER BUILD VALIDATION ───────────────────────────────
-        stage('Docker Build') {
-            options { timeout(time: 15, unit: 'MINUTES') }  // [5]
-            steps {
-                sh '''
-                    echo "Building all service images (tag: ${IMAGE_TAG})..."
-                    docker build --network=host -t pk-auth:${IMAGE_TAG}         ./services/auth
-                    docker build --network=host -t pk-form:${IMAGE_TAG}         ./services/form
-                    docker build --network=host -t pk-workflow:${IMAGE_TAG}     ./services/workflow
-                    docker build --network=host -t pk-task:${IMAGE_TAG}         ./services/task
-                    docker build --network=host -t pk-notification:${IMAGE_TAG} ./services/notification
-                    docker build --network=host -t pk-frontend:${IMAGE_TAG}     ./frontend
+        stage('Build & Push Images') {
+            options {
+               timeout(time: 20, unit: 'MINUTES')
+         }
 
-                    echo "All images built successfully"
-                    docker images | grep "^pk-"
-                '''
-            }
+        steps {
+            sh '''
+               echo "Building and pushing Docker images..."
+
+               docker build --network=host -t ${REGISTRY}/omniflow-auth:latest ./services/auth
+               docker push ${REGISTRY}/omniflow-auth:latest
+
+               docker build --network=host -t ${REGISTRY}/omniflow-form:latest ./services/form
+               docker push ${REGISTRY}/omniflow-form:latest
+
+               docker build --network=host -t ${REGISTRY}/omniflow-workflow:latest ./services/workflow
+               docker push ${REGISTRY}/omniflow-workflow:latest
+
+               docker build --network=host -t ${REGISTRY}/omniflow-task:latest ./services/task
+               docker push ${REGISTRY}/omniflow-task:latest
+
+               docker build --network=host -t ${REGISTRY}/omniflow-notification:latest ./services/notification
+               docker push ${REGISTRY}/omniflow-notification:latest
+
+               docker build --network=host -t ${REGISTRY}/omniflow-frontend:latest ./frontend
+               docker push ${REGISTRY}/omniflow-frontend:latest
+        '''
         }
+    }
 
-        // ─── STAGE 4: PUSH TO REGISTRY (main only) ──────────────────────────
-        stage('Push Images') {
-            when { 
-                expression {
-                    env.GIT_BRANCH == 'origin/main'
-                }
-             }
-            options { timeout(time: 10, unit: 'MINUTES') }  // [5]
-            steps {
-                // [7] withCredentials keeps the token out of the console log
-                withCredentials([string(credentialsId: 'ghcr-token', variable: 'GHCR_TOKEN_SECRET')]) {
-                    sh '''
-                        echo $GHCR_TOKEN_SECRET | docker login ghcr.io -u $GHCR_USER --password-stdin
-
-                        for svc in auth form workflow task notification frontend; do
-                            docker tag pk-${svc}:${IMAGE_TAG} ${IMAGE_PREFIX}-${svc}:${IMAGE_TAG}
-                            docker tag pk-${svc}:${IMAGE_TAG} ${IMAGE_PREFIX}-${svc}:latest
-                            docker push ${IMAGE_PREFIX}-${svc}:${IMAGE_TAG}
-                            docker push ${IMAGE_PREFIX}-${svc}:latest
-                            echo "Pushed: ${svc} → ${IMAGE_TAG}"
-                        done
-
-                        docker logout ghcr.io
-                    '''
-                }
-            }
-        }
-
-        /* ─── STAGE 5: DEPLOY TO KUBERNETES  ───── */
+        /* ─── STAGE 4: DEPLOY TO KUBERNETES  ───── */
         
         stage('Deploy to Kubernetes') {
             when { 
@@ -280,95 +273,75 @@ pipeline {
                     env.GIT_BRANCH == 'origin/main'
                 }
              }
-            agent {
-                docker {
-                    image 'bitnami/kubectl:latest'
-                    reuseNode true
-                    // --dns so kubectl can resolve the cluster API server hostname
-                    args '-u root --dns=8.8.8.8 --dns=1.1.1.1'
-                }
-            }
+            
             environment {
                 KUBECONFIG = credentials('omniflow-kubeconfig')
             }
             steps {
                 sh '''
-                    for svc in auth form workflow task notification frontend; do
-                        kubectl set image deployment/pk-${svc} \
-                            pk-${svc}=${IMAGE_PREFIX}-${svc}:${IMAGE_TAG}
-                    done
-                    for svc in auth form workflow task notification frontend; do
-                        kubectl rollout status deployment/pk-${svc} --timeout=300s
+                    echo "Checking Kubernetes cluster..."
+                    kubectl get nodes
+
+                    echo "Deploying Kubernetes manifests..."
+                    kubectl apply -f k8s/
+
+                    echo "Waiting for deployments..."
+
+                    for svc in auth form workflow task notification frontend gateway; do
+                        kubectl rollout status deployment/${svc} \
+                        -n omniflow \
+                        --timeout=300s
                     done
                 '''
             }
         }
 
-        // ─── STAGE 6: SMOKE TESTS  ──────────────
+        // ─── STAGE 5: SMOKE TESTS  ──────────────
         stage('Smoke Tests') {
             when { 
                 expression {
                     env.GIT_BRANCH == 'origin/main'
                 }
-             }
-            steps {
-                script {
-                    // Start all services in the background on the CI network for validation
-                    sh """
-                        for svc in auth form workflow task notification; do
-                            docker run -d \
-                                --name pk-\${svc}-smoke \
-                                --network ${CI_NETWORK} \
-                                -e DATABASE_URL=postgresql://pk_user:pk_password@pk-postgres-${BUILD_NUMBER}:5432/paper_killer_test \
-                                -e REDIS_URL=redis://pk-redis-${BUILD_NUMBER}:6379/0 \
-                                -e JWT_SECRET=test_secret_key_not_for_production \
-                                pk-\${svc}:${IMAGE_TAG}
-                        done
-                    """
+            }
 
-                    sh """
-                        docker run --rm \
-                            --network ${CI_NETWORK} \
-                            ${TEST_BASE_IMG} \
-                            sh -c "
-                                sleep 10
-                                for svc in auth form workflow task notification; do
-                                    # Use internal container names on CI_NETWORK
-                                    STATUS=\$(curl -s -o /dev/null -w '%{http_code}' http://pk-\${svc}-smoke:80/health || echo '000')
-                                    if [ \\"\$STATUS\\" != '200' ]; then
-                                        echo \\"SMOKE TEST FAILED: \$svc returned \$STATUS\\"
-                                        exit 1
-                                    fi
-                                    echo \\"Health check passed: \$svc\\"
-                                done
-                            "
-                    """
-                }
+            environment {
+                KUBECONFIG = credentials('omniflow-kubeconfig')
             }
-            post {
-                always {
-                    sh "docker rm -f \$(docker ps -a -q --filter 'name=pk-.*-smoke') 2>/dev/null || true"
+
+            steps {
+                    // Start all services in the background on the CI network for validation
+                    sh '''
+                        echo "Running Kubernetes smoke tests..."
+
+                        kubectl get pods -n omniflow
+
+                        kubectl wait \
+                            --for=condition=Ready \
+                            pod \
+                            --all \
+                            -n omniflow \
+                            --timeout=120s
+
+                        echo "All pods are ready."
+                        
+                        kubectl get services -n omniflow
+                    '''
                 }
-            }
-        }
         
-    }
+        }
 
     post {
         failure {
-            echo "Pipeline FAILED — branch: ${env.BRANCH_NAME ?: 'unknown'} — tag: ${IMAGE_TAG}"
+            echo "Pipeline FAILED — branch: ${env.BRANCH_NAME ?: 'unknown'} "
         }
         always {
             // [3] Final cleanup of network and test base image
             sh """
-                docker rm -f pk-postgres-${BUILD_NUMBER} pk-redis-${BUILD_NUMBER} 2>/dev/null || true
-                docker network rm ${CI_NETWORK} 2>/dev/null || true
-                docker rmi ${TEST_BASE_IMG} 2>/dev/null || true
-                docker rmi \$(docker images 'pk-*' -q) --force 2>/dev/null || true
+                docker rmi $(docker images "${REGISTRY}/omniflow-*" -q) --force 2>/dev/null || true
             """
         }
         success {
-            echo "Pipeline PASSED — branch: ${env.BRANCH_NAME ?: 'unknown'} — tag: ${IMAGE_TAG}"
+            echo "Pipeline PASSED — branch: ${env.BRANCH_NAME ?: 'unknown'} "
         }
     }
 }
