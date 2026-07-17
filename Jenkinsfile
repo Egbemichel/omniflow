@@ -192,7 +192,7 @@ pipeline {
                             sleep testDelay
 
                             echo "====== Testing ${serviceName} (Parallel) ======"
-                            sh '''
+                            sh """
                                 docker run --rm \
                                     --network container:pk-postgres-${BUILD_NUMBER} \
                                     -v ${WORKSPACE}:${WORKSPACE} \
@@ -205,7 +205,7 @@ pipeline {
                                     -e JWT_EXPIRE_MINUTES=60 \
                                     ${TEST_BASE_IMG} \
                                     sh -c '
-                                        pip install --no-index --find-links=/wheels -r requirements.txt --quiet --root-user-action=ignore &&
+                                        pip install --no-index --find-links=/wheels -r ${WORKSPACE}/services/${serviceName}/requirements.txt
                                         PYTHONPATH=.:../.. alembic upgrade head &&
                                         PYTHONPATH=.:../.. pytest tests/ -v \
                                             --cov=app \
@@ -214,7 +214,7 @@ pipeline {
                                             --cov-report=html:htmlcov \
                                             --cov-fail-under=85
                                     '
-                            '''
+                            """
                         }
                     }
 
