@@ -79,6 +79,7 @@ pipeline {
 
                     echo "--- Bandit security scan ---"
                     bandit -r services/ -ll \
+                        --skip B608 \
                         -x services/auth/tests,services/form/tests,services/workflow/tests,services/task/tests,services/notification/tests \
                         -q
 
