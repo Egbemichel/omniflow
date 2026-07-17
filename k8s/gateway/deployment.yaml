@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: omniflow
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: gateway
+
+  template:
+    metadata:
+      labels:
+        app: gateway
+
+    spec:
+      containers:
+        - name: gateway
+          image: nginx:alpine
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 80
+
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 20
+
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: gateway-nginx-config

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-initdb
+  namespace: omniflow
+
+data:
+  init.sql: |
+    CREATE SCHEMA IF NOT EXISTS auth_schema;
+    CREATE SCHEMA IF NOT EXISTS form_schema;
+    CREATE SCHEMA IF NOT EXISTS workflow_schema;
+    CREATE SCHEMA IF NOT EXISTS task_schema;
+    CREATE SCHEMA IF NOT EXISTS notification_schema;
+
+    GRANT ALL ON SCHEMA auth_schema TO pk_user;
+    GRANT ALL ON SCHEMA form_schema TO pk_user;
+    GRANT ALL ON SCHEMA workflow_schema TO pk_user;
+    GRANT ALL ON SCHEMA task_schema TO pk_user;
+    GRANT ALL ON SCHEMA notification_schema TO pk_user;
