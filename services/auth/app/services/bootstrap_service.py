@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.models.institution import Institution
@@ -8,6 +9,25 @@ from app.models.user import User
 
 
 DEFAULT_BOOTSTRAP_INSTITUTION_ID = 1
+
+
+def _sync_institution_sequence(db: Session) -> None:
+    if db.bind is None or db.bind.dialect.name != "postgresql":
+        return
+
+    schema = os.getenv("DATABASE_SCHEMA", "auth_schema")
+    db.execute(
+        text(
+            f"""
+            SELECT setval(
+                pg_get_serial_sequence('{schema}.institutions', 'id'),
+                GREATEST((SELECT COALESCE(MAX(id), 1) FROM {schema}.institutions), 1),
+                true
+            )
+            """
+        )
+    )
+    db.commit()
 
 
 def ensure_default_institution(db: Session) -> Institution:
@@ -26,6 +46,7 @@ def ensure_default_institution(db: Session) -> Institution:
         if changed:
             db.commit()
             db.refresh(institution)
+        _sync_institution_sequence(db)
         return institution
 
     institution = Institution(
@@ -36,6 +57,7 @@ def ensure_default_institution(db: Session) -> Institution:
     db.add(institution)
     db.commit()
     db.refresh(institution)
+    _sync_institution_sequence(db)
     return institution
 
 
