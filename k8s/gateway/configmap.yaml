@@ -32,7 +32,7 @@ data:
 
             # QR Code Landing
             location /submit/ {
-                set $frontend_service "frontend:80";
+                set $frontend_service "10.43.108.248:80";
                 proxy_pass http://$frontend_service;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
@@ -40,7 +40,7 @@ data:
 
             # Server-Sent Events
             location /api/events {
-                set $notification_service "notification:8005";
+                set $notification_service "10.43.111.28:8005";
                 rewrite ^/api/events$ /events break;
                 proxy_pass http://$notification_service;
                 proxy_set_header Host $host;
@@ -54,7 +54,7 @@ data:
 
             # Public Form API
             location /api/form-public/ {
-                set $form_service "form:8002";
+                set $form_service "10.43.163.235:8002";
                 rewrite ^/api/form-public/(.*)$ /$1 break;
                 proxy_pass http://$form_service;
                 proxy_set_header Host $host;
@@ -63,7 +63,7 @@ data:
 
             # Frontend
             location / {
-                set $frontend_service "frontend:80";
+                set $frontend_service "10.43.108.248:80";
                 proxy_pass http://$frontend_service;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
@@ -71,7 +71,7 @@ data:
 
             # Authentication Service
             location /api/auth/ {
-                set $auth_service "auth:8001";
+                set $auth_service "10.43.38.73:8001";
                 rewrite ^/api/auth/(.*)$ /$1 break;
                 proxy_pass http://$auth_service;
                 proxy_set_header Host $host;
@@ -81,7 +81,7 @@ data:
             # Internal JWT Verification
             location = /_auth_verify {
                 internal;
-                set $auth_service "auth:8001";
+                set $auth_service "10.43.38.73:8001";
                 proxy_pass http://$auth_service/auth/verify;
                 proxy_pass_request_body off;
                 proxy_set_header Content-Length "";
@@ -102,7 +102,7 @@ data:
                 proxy_set_header X-Institution-Id $institution_id;
                 proxy_set_header X-Actor-Type $actor_type;
 
-                set $task_service "task:8004";
+                set $task_service "10.43.43.252:8004";
                 rewrite ^/api/task/(.*)$ /$1 break;
                 proxy_pass http://$task_service;
             }
@@ -119,7 +119,7 @@ data:
                 proxy_set_header X-User-Role $user_role;
                 proxy_set_header X-Institution-Id $institution_id;
 
-                set $form_service "form:8002";
+                set $form_service "10.43.163.235:8002";
                 rewrite ^/api/form/(.*)$ /$1 break;
                 proxy_pass http://$form_service;
             }
@@ -136,7 +136,7 @@ data:
                 proxy_set_header X-User-Role $user_role;
                 proxy_set_header X-Institution-Id $institution_id;
 
-                set $workflow_service "workflow:8003";
+                set $workflow_service "10.43.127.43:8003";
                 rewrite ^/api/workflow/(.*)$ /$1 break;
                 proxy_pass http://$workflow_service;
             }
@@ -155,14 +155,14 @@ data:
                 proxy_set_header X-Institution-Id $institution_id;
                 proxy_set_header X-Actor-Type $actor_type;
 
-                set $notification_service "notification:8005";
+                set $notification_service "10.43.111.28:8005";
                 rewrite ^/api/notification/(.*)$ /$1 break;
                 proxy_pass http://$notification_service;
             }
 
             # OAuth Callbacks
             location /auth/ {
-                set $auth_service "auth:8001";
+                set $auth_service "10.43.38.73:8001";
                 proxy_pass http://$auth_service;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
