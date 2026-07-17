@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 from app.routes.dependencies import get_current_user
+from app.services.bootstrap_service import ensure_default_institution
 
 # ---------------------------------------------------------------------------
 # Path bootstrap — must happen before ANY local imports.
@@ -153,21 +154,24 @@ def clean_db():
         with engine.begin() as conn:
             if engine.dialect.name == "postgresql":
                 conn.execute(text("SET search_path TO auth_schema"))
+
             db = TestingSessionLocal()
             try:
                 if engine.dialect.name == "postgresql":
                     db.execute(text("SET search_path TO auth_schema"))
                     db.commit()
 
-                if not db.query(Institution).filter(Institution.id == 1).first():
-                    db.add(Institution(id=1, name="Paper Killer Root", type="office"))
-                    db.commit()
+                # Ensure the default institution exists and the PostgreSQL
+                # sequence is synchronized.
+                ensure_default_institution(db)
+
             finally:
                 db.close()
     except Exception:
         pass
 
     yield
+
     try:
         with engine.begin() as conn:
             if engine.dialect.name == "postgresql":
