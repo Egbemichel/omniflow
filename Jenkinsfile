@@ -283,6 +283,10 @@ pipeline {
                     kubectl get nodes
 
                     echo "Deploying Kubernetes manifests..."
+                    kubectl apply -f k8s/namespace.yaml
+
+                    sleep 5  # Give the namespace a moment to be created
+                    
                     kubectl apply -f k8s/
 
                     echo "Waiting for deployments..."
