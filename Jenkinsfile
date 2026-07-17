@@ -57,8 +57,8 @@ pipeline {
                 echo "===== Jenkins Environment ====="
                 env | sort | grep -E 'BRANCH|GIT|CHANGE|JOB|BUILD' || true
             '''
+          }
         }
-    }
 
        
 
@@ -73,7 +73,7 @@ pipeline {
                     echo "Target Branch      : ${env.TARGET_BRANCH}"
                 }
             }
-      }
+        }
 
         // ─── STAGE 0: PREPARE TEST IMAGE ────────────────────────────────────
         stage('Prepare Test Base') {
@@ -329,7 +329,7 @@ pipeline {
                 }
         
         }
-
+    }
     post {
         failure {
             echo "Pipeline FAILED — branch: ${env.BRANCH_NAME ?: 'unknown'} "
