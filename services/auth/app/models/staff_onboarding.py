@@ -50,7 +50,7 @@ class StaffCSVRow(Base):
             f"{SCHEMA}.staff_csv_uploads.id" if SCHEMA else "staff_csv_uploads.id",
             ondelete="CASCADE",
         ),
-        nullable=False,
+        nullable=True,
         index=True,
     )
     institution_id = Column(Integer, nullable=False, index=True)

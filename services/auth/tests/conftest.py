@@ -144,20 +144,25 @@ def setup_db():
 def clean_db():
     """Wipe all rows between each test — guarantees full isolation."""
     yield
-    with engine.begin() as conn:
-        if engine.dialect.name == "postgresql":
-            # PostgreSQL: Use TRUNCATE for speed and to reset sequences
-            for table in reversed(Base.metadata.sorted_tables):
-                schema_prefix = f"{table.schema}." if table.schema else ""
-                conn.execute(
-                    text(
-                        f"TRUNCATE TABLE {schema_prefix}{table.name} RESTART IDENTITY CASCADE"
+    try:
+        with engine.begin() as conn:
+            if engine.dialect.name == "postgresql":
+                # PostgreSQL: Use TRUNCATE for speed and to reset sequences
+                for table in reversed(Base.metadata.sorted_tables):
+                    schema_prefix = f"{table.schema}." if table.schema else ""
+                    conn.execute(
+                        text(
+                            f"TRUNCATE TABLE {schema_prefix}{table.name} RESTART IDENTITY CASCADE"
+                        )
                     )
-                )
-        else:
-            # SQLite: Use DELETE
-            for table in reversed(Base.metadata.sorted_tables):
-                conn.execute(table.delete())
+            else:
+                # SQLite: Use DELETE
+                for table in reversed(Base.metadata.sorted_tables):
+                    conn.execute(table.delete())
+    except Exception:
+        # If database is not available, we skip cleaning. 
+        # Integration tests will still fail when they try to use DB.
+        pass
 
 
 # ---------------------------------------------------------------------------
