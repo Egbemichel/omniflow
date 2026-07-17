@@ -72,16 +72,17 @@ def delete_user(
     db: Session = Depends(get_db),
     admin=Depends(require_admin),
 ):
+    if user_id == admin.id:
+        raise HTTPException(
+            status_code=400, detail="You cannot delete your own account"
+        )
+
     repo = UserRepository(db)
     user = repo.get_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if admin.role != "super_admin" and user.institution_id != admin.institution_id:
         raise HTTPException(status_code=404, detail="User not found")
-    if user.id == admin.id:
-        raise HTTPException(
-            status_code=400, detail="You cannot delete your own account"
-        )
     if user.role == "super_admin" and admin.role != "super_admin":
         raise HTTPException(
             status_code=403, detail="Only super_admin can delete super_admin"
