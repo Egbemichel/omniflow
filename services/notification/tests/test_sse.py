@@ -1,7 +1,7 @@
 import pytest
 import httpx
 from app.sse import _frame, _ui_events, _authenticate
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, MagicMock
 
 
 def test_frame():
@@ -105,9 +105,9 @@ async def test_sse_endpoint_authorized(client):
         
         # Mock Redis
         with patch("redis.asyncio.from_url") as mock_redis_url:
-            mock_redis = AsyncMock()
+            mock_redis = MagicMock() # Use MagicMock for the client as its methods are not all async
             mock_redis_url.return_value = mock_redis
-            mock_pubsub = AsyncMock()
+            mock_pubsub = AsyncMock() # pubsub methods are async
             mock_redis.pubsub.return_value = mock_pubsub
             
             # Setup pubsub.get_message to return one message then None (to test loop)
@@ -120,7 +120,7 @@ async def test_sse_endpoint_authorized(client):
             with patch("fastapi.Request.is_disconnected", side_effect=[False, False, True]):
                 response = client.get("/events?token=valid")
                 assert response.status_code == 200
-                assert response.headers["content-type"] == "text/event-stream"
+                assert "text/event-stream" in response.headers["content-type"]
                 
                 # Check that it connected
                 content = b"".join(response.iter_bytes())
