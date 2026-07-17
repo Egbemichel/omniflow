@@ -22,7 +22,6 @@ class HeaderUser:
 
 def get_current_user(
     authorization: Optional[str] = Header(None),
-
     # Internal/test authentication headers
     x_user_role: Optional[str] = Header(None, alias="X-User-Role"),
     x_institution_id: Optional[str] = Header(None, alias="X-Institution-Id"),
@@ -30,7 +29,6 @@ def get_current_user(
     x_user_email: Optional[str] = Header(None, alias="X-User-Email"),
     x_user_name: Optional[str] = Header(None, alias="X-User-Name"),
     x_actor_type: Optional[str] = Header(None, alias="X-Actor-Type"),
-
     db: Session = Depends(get_db),
 ):
     """
@@ -76,13 +74,8 @@ def get_current_user(
     # (Used by unit tests and internal service calls)
     # ---------------------------------------------------------
     if x_user_role:
-
         try:
-            institution_id = (
-                int(x_institution_id)
-                if x_institution_id
-                else 1
-            )
+            institution_id = int(x_institution_id) if x_institution_id else 1
 
         except ValueError:
             raise HTTPException(

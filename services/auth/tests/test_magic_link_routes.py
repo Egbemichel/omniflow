@@ -81,6 +81,7 @@ def test_magic_link_request_sends_email(client_with_magic_link_override, monkeyp
 
 def test_get_magic_link_config_missing_env(monkeypatch):
     from app.services.magic_link_service import get_magic_link_config
+
     monkeypatch.delenv("MAGIC_LINK_SECRET", raising=False)
     with pytest.raises(RuntimeError) as exc:
         get_magic_link_config()
