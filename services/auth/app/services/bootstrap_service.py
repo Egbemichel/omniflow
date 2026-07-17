@@ -17,7 +17,7 @@ def _sync_institution_sequence(db: Session) -> None:
 
     schema = os.getenv("DATABASE_SCHEMA", "auth_schema")
     db.execute(
-        text(
+        text(  # nosec B608
             f"""
             SELECT setval(
                 pg_get_serial_sequence('{schema}.institutions', 'id'),
