@@ -8,7 +8,7 @@ Create Date: 2026-07-17
 import sqlalchemy as sa
 from alembic import op
 
-revision = "20260606_make_staff_row_upload_optional"
+revision = "20260606_upload_optional"
 down_revision = "20260605_actor_types"
 branch_labels = None
 depends_on = None
