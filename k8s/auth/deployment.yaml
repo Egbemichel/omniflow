@@ -1,0 +1,158 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  namespace: omniflow
+
+spec:
+  replicas: 1
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: auth
+
+  template:
+    metadata:
+      labels:
+        app: auth
+
+    spec:
+      containers:
+        - name: auth
+
+          image: 127.0.0.1:5001/omniflow-auth:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8001
+
+          env:
+
+            - name: DATABASE_URL
+              value: "postgresql://pk_user:pk_password@postgres:5432/pk_user"
+
+            - name: DATABASE_SCHEMA
+              value: auth_schema
+
+            - name: REDIS_URL
+              value: "redis://redis:6379/0"
+
+            - name: JWT_ALGORITHM
+              valueFrom:
+                configMapKeyRef:
+                  name: omniflow-config
+                  key: JWT_ALGORITHM
+
+            - name: JWT_EXPIRE_MINUTES
+              valueFrom:
+                configMapKeyRef:
+                  name: omniflow-config
+                  key: JWT_EXPIRE_MINUTES
+
+            - name: FRONTEND_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: omniflow-config
+                  key: FRONTEND_URL
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: omniflow-secret
+                  key: JWT_SECRET
+
+            - name: GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: omniflow-secret
+                  key: GOOGLE_CLIENT_ID
+
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: omniflow-secret
+                  key: GOOGLE_CLIENT_SECRET
+
+            - name: GOOGLE_REDIRECT_URI
+              valueFrom:
+                secretKeyRef:
+                  name: omniflow-secret
+                  key: GOOGLE_REDIRECT_URI
+
+            - name: GITHUB_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: omniflow-secret
+                  key: GITHUB_CLIENT_ID
+
+            - name: GITHUB_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: omniflow-secret
+                  key: GITHUB_CLIENT_SECRET
+
+            - name: GITHUB_REDIRECT_URI
+              valueFrom:
+                secretKeyRef:
+                  name: omniflow-secret
+                  key: GITHUB_REDIRECT_URI
+
+            - name: RESEND_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: omniflow-secret
+                  key: RESEND_API_KEY
+
+            - name: MAGIC_LINK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: omniflow-secret
+                  key: MAGIC_LINK_SECRET
+
+            - name: MAGIC_LINK_FROM_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: omniflow-secret
+                  key: MAGIC_LINK_FROM_EMAIL
+
+            - name: BOOTSTRAP_SUPER_ADMIN_EMAIL
+              value: "egbemichel39@gmail.com"
+
+            - name: BOOTSTRAP_SUPER_ADMIN_NAME
+              value: "Egbemicheal"
+
+            - name: BOOTSTRAP_INSTITUTION_NAME
+              value: "OmniFlow"
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

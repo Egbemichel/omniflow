@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification
+  namespace: omniflow
+
+spec:
+  replicas: 1
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: notification
+
+  template:
+    metadata:
+      labels:
+        app: notification
+
+    spec:
+      containers:
+        - name: notification
+
+          image: 127.0.0.1:5001/omniflow-notification:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8005
+
+          env:
+
+            - name: DATABASE_URL
+              value: "postgresql://pk_user:pk_password@postgres:5432/pk_user"
+
+            - name: DATABASE_SCHEMA
+              value: notification_schema
+
+            - name: REDIS_URL
+              value: "redis://redis:6379/0"
+
+            - name: AUTH_SERVICE_URL
+              value: "http://auth:8001"
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8005
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8005
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

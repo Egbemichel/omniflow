@@ -1,0 +1,171 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-nginx-config
+  namespace: omniflow
+
+data:
+  nginx.conf: |
+    worker_processes 1;
+
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        include       mime.types;
+        default_type  application/octet-stream;
+        sendfile on;
+        keepalive_timeout 65;
+
+        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for"';
+
+        access_log /var/log/nginx/access.log main;
+
+        resolver kube-dns.kube-system.svc.cluster.local valid=10s ipv6=off;
+
+        server {
+            listen 80;
+            server_name localhost;
+
+            # QR Code Landing
+            location /submit/ {
+                set $frontend_service "frontend:80";
+                proxy_pass http://$frontend_service;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+            }
+
+            # Server-Sent Events
+            location /api/events {
+                set $notification_service "notification:8005";
+                rewrite ^/api/events$ /events break;
+                proxy_pass http://$notification_service;
+                proxy_set_header Host $host;
+                proxy_http_version 1.1;
+                proxy_set_header Connection '';
+                proxy_buffering off;
+                proxy_cache off;
+                proxy_read_timeout 3600s;
+                chunked_transfer_encoding off;
+            }
+
+            # Public Form API
+            location /api/form-public/ {
+                set $form_service "form:8002";
+                rewrite ^/api/form-public/(.*)$ /$1 break;
+                proxy_pass http://$form_service;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+            }
+
+            # Frontend
+            location / {
+                set $frontend_service "frontend:80";
+                proxy_pass http://$frontend_service;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+            }
+
+            # Authentication Service
+            location /api/auth/ {
+                set $auth_service "auth:8001";
+                rewrite ^/api/auth/(.*)$ /$1 break;
+                proxy_pass http://$auth_service;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+            }
+
+            # Internal JWT Verification
+            location = /_auth_verify {
+                internal;
+                set $auth_service "auth:8001";
+                proxy_pass http://$auth_service/auth/verify;
+                proxy_pass_request_body off;
+                proxy_set_header Content-Length "";
+                proxy_set_header X-Original-URI $request_uri;
+            }
+
+            # Task Service
+            location /api/task/ {
+                auth_request /_auth_verify;
+
+                auth_request_set $user_id $upstream_http_x_user_id;
+                auth_request_set $user_role $upstream_http_x_user_role;
+                auth_request_set $institution_id $upstream_http_x_institution_id;
+                auth_request_set $actor_type $upstream_http_x_actor_type;
+
+                proxy_set_header X-User-Id $user_id;
+                proxy_set_header X-User-Role $user_role;
+                proxy_set_header X-Institution-Id $institution_id;
+                proxy_set_header X-Actor-Type $actor_type;
+
+                set $task_service "task:8004";
+                rewrite ^/api/task/(.*)$ /$1 break;
+                proxy_pass http://$task_service;
+            }
+
+            # Form Service
+            location /api/form/ {
+                auth_request /_auth_verify;
+
+                auth_request_set $user_id $upstream_http_x_user_id;
+                auth_request_set $user_role $upstream_http_x_user_role;
+                auth_request_set $institution_id $upstream_http_x_institution_id;
+
+                proxy_set_header X-User-Id $user_id;
+                proxy_set_header X-User-Role $user_role;
+                proxy_set_header X-Institution-Id $institution_id;
+
+                set $form_service "form:8002";
+                rewrite ^/api/form/(.*)$ /$1 break;
+                proxy_pass http://$form_service;
+            }
+
+            # Workflow Service
+            location /api/workflow/ {
+                auth_request /_auth_verify;
+
+                auth_request_set $user_id $upstream_http_x_user_id;
+                auth_request_set $user_role $upstream_http_x_user_role;
+                auth_request_set $institution_id $upstream_http_x_institution_id;
+
+                proxy_set_header X-User-Id $user_id;
+                proxy_set_header X-User-Role $user_role;
+                proxy_set_header X-Institution-Id $institution_id;
+
+                set $workflow_service "workflow:8003";
+                rewrite ^/api/workflow/(.*)$ /$1 break;
+                proxy_pass http://$workflow_service;
+            }
+
+            # Notification Service
+            location /api/notification/ {
+                auth_request /_auth_verify;
+
+                auth_request_set $user_id $upstream_http_x_user_id;
+                auth_request_set $user_role $upstream_http_x_user_role;
+                auth_request_set $institution_id $upstream_http_x_institution_id;
+                auth_request_set $actor_type $upstream_http_x_actor_type;
+
+                proxy_set_header X-User-Id $user_id;
+                proxy_set_header X-User-Role $user_role;
+                proxy_set_header X-Institution-Id $institution_id;
+                proxy_set_header X-Actor-Type $actor_type;
+
+                set $notification_service "notification:8005";
+                rewrite ^/api/notification/(.*)$ /$1 break;
+                proxy_pass http://$notification_service;
+            }
+
+            # OAuth Callbacks
+            location /auth/ {
+                set $auth_service "auth:8001";
+                proxy_pass http://$auth_service;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+            }
+        }
+    }

@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task
+  namespace: omniflow
+
+spec:
+  replicas: 1
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: task
+
+  template:
+    metadata:
+      labels:
+        app: task
+
+    spec:
+      containers:
+        - name: task
+
+          image: 127.0.0.1:5001/omniflow-task:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8004
+
+          env:
+
+            - name: DATABASE_URL
+              value: "postgresql://pk_user:pk_password@postgres:5432/pk_user"
+
+            - name: DATABASE_SCHEMA
+              value: task_schema
+
+            - name: REDIS_URL
+              value: "redis://redis:6379/0"
+
+            - name: WORKFLOW_SERVICE_URL
+              value: "http://workflow:8003"
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
