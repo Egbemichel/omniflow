@@ -35,19 +35,19 @@ spec:
           env:
 
             - name: DATABASE_URL
-              value: "postgresql://pk_user:pk_password@postgres:5432/pk_user"
+              value: "postgresql://pk_user:pk_password@10.43.180.200:5432/pk_user"
 
             - name: DATABASE_SCHEMA
               value: form_schema
 
             - name: REDIS_URL
-              value: "redis://redis:6379/0"
+              value: "redis://10.43.106.207:6379/0"
 
             - name: AUTH_SERVICE_URL
-              value: "http://auth:8001"
+              value: "http://10.43.38.73:8001"
 
             - name: TASK_SERVICE_URL
-              value: "http://task:8004"
+              value: "http://10.43.43.252:8004"
 
             - name: UPLOAD_DIR
               value: "/uploads"
