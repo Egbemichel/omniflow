@@ -287,7 +287,7 @@ pipeline {
 
                     sleep 5  # Give the namespace a moment to be created
                     
-                    kubectl apply -f k8s/
+                    kubectl apply -R -f k8s/
 
                     echo "Waiting for deployments..."
 
