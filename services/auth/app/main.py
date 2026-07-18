@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+pp import models  # noqa: F401from sqlalchemy import text
 from sqlalchemy import text
+from prometheus_fastapi_instrumentator import Instrumentator
 from app import models  # noqa: F401
 from app.database import engine, SessionLocal
 from app.routes.api import router
@@ -13,6 +14,7 @@ app = FastAPI(title="OmniFlow Auth Service", version="1.0.0")
 
 app.include_router(router)
 
+Instrumentator().instrument(app).expose(app)
 
 @app.on_event("startup")
 def startup_checks():
