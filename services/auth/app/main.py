@@ -1,6 +1,7 @@
-pp import models  # noqa: F401from sqlalchemy import text
-from sqlalchemy import text
+from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
+from sqlalchemy import text
+
 from app import models  # noqa: F401
 from app.database import engine, SessionLocal
 from app.routes.api import router
