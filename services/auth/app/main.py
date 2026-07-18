@@ -17,6 +17,7 @@ app.include_router(router)
 
 Instrumentator().instrument(app).expose(app)
 
+
 @app.on_event("startup")
 def startup_checks():
     db = SessionLocal()
